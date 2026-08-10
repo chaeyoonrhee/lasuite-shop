@@ -43,11 +43,12 @@
     font-size:28px; font-weight:600; letter-spacing:0.22em;
     color:var(--ink); text-decoration:none;
   }
-  nav.main-nav{display:flex; gap:36px;}
+  nav.main-nav{display:flex; gap:20px; overflow-x:auto; scrollbar-width:none; max-width:640px;}
+  nav.main-nav::-webkit-scrollbar{display:none;}
   nav.main-nav a{
-    font-size:13px; color:var(--ink-soft); text-decoration:none;
-    letter-spacing:0.05em; padding-bottom:4px; border-bottom:1px solid transparent;
-    transition:.25s;
+    font-size:11.5px; color:var(--ink-soft); text-decoration:none;
+    letter-spacing:0.04em; padding-bottom:4px; border-bottom:1px solid transparent;
+    white-space:nowrap; transition:.25s;
   }
   nav.main-nav a:hover, nav.main-nav a.active{color:var(--ink); border-color:var(--gold);}
   .header-icons{display:flex; align-items:center; gap:22px;}
@@ -96,8 +97,8 @@
   .cat-tabs button{
     font-family:'Pretendard',sans-serif;
     background:transparent; border:1px solid var(--line);
-    color:var(--ink-soft); padding:10px 24px; border-radius:30px;
-    font-size:13px; letter-spacing:0.03em; cursor:pointer;
+    color:var(--ink-soft); padding:10px 20px; border-radius:30px;
+    font-size:12px; letter-spacing:0.03em; cursor:pointer;
     transition:.25s;
   }
   .cat-tabs button:hover{border-color:var(--gold); color:var(--ink);}
@@ -272,12 +273,15 @@
     <a href="#" class="logo">LA SUITE</a>
     <nav class="main-nav">
       <a href="#" class="cat-link active" data-cat="all">ALL</a>
-      <a href="#" class="cat-link" data-cat="new">NEW</a>
-      <a href="#" class="cat-link" data-cat="outer">아우터</a>
-      <a href="#" class="cat-link" data-cat="dress">원피스</a>
-      <a href="#" class="cat-link" data-cat="top">상의</a>
-      <a href="#" class="cat-link" data-cat="bottom">하의</a>
-      <a href="#" class="cat-link" data-cat="knit">니트</a>
+      <a href="#" class="cat-link" data-cat="outer">OUTER</a>
+      <a href="#" class="cat-link" data-cat="set">SET</a>
+      <a href="#" class="cat-link" data-cat="top">TOP</a>
+      <a href="#" class="cat-link" data-cat="bottom">BOTTOM</a>
+      <a href="#" class="cat-link" data-cat="dress">DRESS</a>
+      <a href="#" class="cat-link" data-cat="underwear-homewear">UNDERWEAR&amp;HOMEWEAR</a>
+      <a href="#" class="cat-link" data-cat="acc">ACC</a>
+      <a href="#" class="cat-link" data-cat="shoes">SHOES</a>
+      <a href="#" class="cat-link" data-cat="bag">BAG</a>
     </nav>
     <div class="header-icons">
       <button class="icon-btn" id="cartBtn">BAG<span class="cart-count" id="cartCount">0</span></button>
@@ -293,12 +297,15 @@
 
 <div class="cat-tabs" id="catTabs">
   <button data-cat="all" class="active">전체</button>
-  <button data-cat="new">NEW</button>
-  <button data-cat="outer">아우터</button>
-  <button data-cat="dress">원피스</button>
-  <button data-cat="top">상의</button>
-  <button data-cat="bottom">하의</button>
-  <button data-cat="knit">니트</button>
+  <button data-cat="outer">OUTER</button>
+  <button data-cat="set">SET</button>
+  <button data-cat="top">TOP</button>
+  <button data-cat="bottom">BOTTOM</button>
+  <button data-cat="dress">DRESS</button>
+  <button data-cat="underwear-homewear">UNDERWEAR&amp;HOMEWEAR</button>
+  <button data-cat="acc">ACC</button>
+  <button data-cat="shoes">SHOES</button>
+  <button data-cat="bag">BAG</button>
 </div>
 
 <div class="grid-wrap">
