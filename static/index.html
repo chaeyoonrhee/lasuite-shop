@@ -112,6 +112,19 @@
     grid-template-columns:repeat(4, 1fr);
     gap:36px 28px;
   }
+  .empty-state{
+    grid-column:1/-1;
+    text-align:center;
+    padding:100px 20px;
+  }
+  .empty-state .empty-mark{
+    font-family:'Cormorant Garamond',serif;
+    font-size:22px; letter-spacing:0.3em; color:var(--gold-soft);
+    margin-bottom:22px;
+  }
+  .empty-state p{
+    font-size:14px; color:var(--ink-soft); line-height:1.9;
+  }
   .product-card{cursor:pointer;}
   .product-media{
     position:relative;
@@ -273,7 +286,6 @@
 </header>
 
 <section class="hero">
-  <div class="eyebrow">2026 Autumn Collection</div>
   <h1 class="serif">조용한 우아함,<br>당신의 일상이 되다</h1>
   <div class="divider"></div>
   <p>절제된 실루엣과 좋은 원단이 만드는 균형. LA SUITE는 과하지 않은 아름다움을 만듭니다.</p>
@@ -361,20 +373,7 @@ const shapes = {
   </svg>`
 };
 
-const products = [
-  {id:1, en:'SILK SLIP DRESS', kr:'실크 슬립 원피스', price:189000, cat:['new','dress'], shape:'dress', tone:'#f1e4d8', desc:'매끄러운 실키 소재로 은은한 광택과 부드러운 드레이프가 돋보이는 슬립 원피스입니다. 이너로 겹쳐 입거나 단독으로 착용하기 좋습니다.'},
-  {id:2, en:'CASHMERE BLEND COAT', kr:'울 캐시미어 코트', price:328000, cat:['new','outer'], shape:'coat', tone:'#e8ddcd', desc:'울과 캐시미어를 혼방하여 가볍고 따뜻합니다. 깊은 카라와 넉넉한 실루엣으로 한 시즌 내내 활용도가 높습니다.'},
-  {id:3, en:'LINEN BLOUSE', kr:'리넨 블라우스', price:89000, cat:['top'], shape:'blouse', tone:'#f4f1ea', desc:'통기성이 좋은 리넨 원단으로 사계절 활용 가능한 베이직 블라우스. 은은한 셔링 디테일이 여성스러움을 더합니다.'},
-  {id:4, en:'WIDE STRAIGHT TROUSERS', kr:'하이웨이스트 와이드 팬츠', price:98000, cat:['bottom'], shape:'pants', tone:'#eae6dd', desc:'허리 라인을 살려주는 하이웨이스트 핏과 떨어지는 일자 라인이 다리를 길어 보이게 합니다.'},
-  {id:5, en:'CABLE KNIT SWEATER', kr:'케이블 니트 스웨터', price:118000, cat:['knit'], shape:'knit', tone:'#efe4d3', desc:'클래식한 케이블 패턴의 순모 혼방 니트. 포근한 촉감과 적당한 볼륨감으로 데일리 착용에 좋습니다.', sale:true, originalPrice:148000},
-  {id:6, en:'PLEATED MIDI SKIRT', kr:'플리츠 미디 스커트', price:105000, cat:['bottom','new'], shape:'skirt', tone:'#f6efe6', desc:'섬세한 플리츠가 움직임마다 자연스러운 실루엣을 만드는 미디 기장 스커트입니다.'},
-  {id:7, en:'CLASSIC TRENCH COAT', kr:'트렌치 코트', price:259000, cat:['outer'], shape:'coat', tone:'#ece2d0', desc:'허리 벨트로 실루엣을 조절할 수 있는 클래식 트렌치 코트. 사계절 아우터로 완성도 높은 선택입니다.'},
-  {id:8, en:'V-NECK KNIT DRESS', kr:'브이넥 니트 원피스', price:138000, cat:['dress','knit'], shape:'dress', tone:'#f2e9dc', desc:'부드러운 니트 소재의 브이넥 원피스로 여성스러운 실루엣과 편안한 착용감을 동시에 제공합니다.'},
-  {id:9, en:'SATIN CAMISOLE TOP', kr:'새틴 캐미솔 탑', price:59000, cat:['top','new'], shape:'blouse', tone:'#f3ece1', desc:'광택있는 새틴 소재의 캐미솔 탑. 레이어링 아이템으로도, 단독 착용으로도 우아합니다.'},
-  {id:10, en:'TAILORED WOOL SKIRT', kr:'테일러드 울 스커트', price:112000, cat:['bottom'], shape:'skirt', tone:'#efe6d6', desc:'탄탄한 울 소재와 깔끔한 라인이 돋보이는 테일러드 스커트. 오피스룩에도 잘 어울립니다.', soldout:true},
-  {id:11, en:'BOUCLE JACKET', kr:'부클 트위드 자켓', price:215000, cat:['outer','new'], shape:'coat', tone:'#f0e7da', desc:'클래식한 부클 소재의 트위드 자켓. 짧은 기장으로 스커트, 팬츠 어디에나 잘 어울립니다.'},
-  {id:12, en:'RIBBED KNIT TOP', kr:'리브 니트 탑', price:69000, cat:['top','knit'], shape:'blouse', tone:'#f4eee2', desc:'몸에 자연스럽게 붙는 리브 조직의 니트 탑으로 하의와 매치하기 좋은 기본 아이템입니다.'}
-];
+const products = [];
 
 let currentCat = 'all';
 let cart = [];
@@ -383,6 +382,15 @@ function renderGrid(){
   const grid = document.getElementById('productGrid');
   grid.innerHTML = '';
   const list = products.filter(p => currentCat === 'all' || p.cat.includes(currentCat));
+  if(list.length === 0){
+    grid.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-mark">LA SUITE</div>
+        <p>새로운 컬렉션을 준비하고 있습니다.<br>곧 만나보실 수 있어요.</p>
+      </div>
+    `;
+    return;
+  }
   list.forEach(p => {
     const card = document.createElement('div');
     card.className = 'product-card';
