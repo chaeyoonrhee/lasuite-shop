@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LA SUITE — Women's Collection</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Noto+Serif+KR:wght@300;400;500;600&family=Pretendard:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ivory:#f7f4ef;
+    --ivory-deep:#efe9df;
+    --ink:#2b2620;
+    --ink-soft:#6b6459;
+    --gold:#a9895f;
+    --gold-soft:#cdb896;
+    --line:#e2dbcd;
+    --white:#ffffff;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{
+    font-family:'Pretendard','Noto Serif KR',sans-serif;
+    background:var(--ivory);
+    color:var(--ink);
+    letter-spacing:0.01em;
+  }
+  .serif{font-family:'Cormorant Garamond','Noto Serif KR',serif;}
+
+  /* ---------- Header ---------- */
+  header{
+    position:sticky; top:0; z-index:100;
+    background:rgba(247,244,239,0.92);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .header-inner{
+    max-width:1200px; margin:0 auto;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:22px 32px;
+  }
+  .logo{
+    font-family:'Cormorant Garamond',serif;
+    font-size:28px; font-weight:600; letter-spacing:0.22em;
+    color:var(--ink); text-decoration:none;
+  }
+  nav.main-nav{display:flex; gap:36px;}
+  nav.main-nav a{
+    font-size:13px; color:var(--ink-soft); text-decoration:none;
+    letter-spacing:0.05em; padding-bottom:4px; border-bottom:1px solid transparent;
+    transition:.25s;
+  }
+  nav.main-nav a:hover, nav.main-nav a.active{color:var(--ink); border-color:var(--gold);}
+  .header-icons{display:flex; align-items:center; gap:22px;}
+  .icon-btn{
+    background:none; border:none; cursor:pointer; position:relative;
+    color:var(--ink); font-size:13px; letter-spacing:0.04em;
+    display:flex; align-items:center; gap:6px;
+  }
+  .cart-count{
+    position:absolute; top:-8px; right:-14px;
+    background:var(--gold); color:#fff; font-size:10px;
+    width:16px; height:16px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+  }
+
+  /* ---------- Hero ---------- */
+  .hero{
+    max-width:1200px; margin:0 auto;
+    padding:90px 32px 70px;
+    text-align:center;
+  }
+  .hero .eyebrow{
+    font-size:12px; letter-spacing:0.35em; color:var(--gold);
+    text-transform:uppercase; margin-bottom:18px;
+  }
+  .hero h1{
+    font-family:'Cormorant Garamond',serif;
+    font-weight:500; font-size:56px; line-height:1.25;
+    color:var(--ink); margin-bottom:20px;
+  }
+  .hero p{
+    font-size:15px; color:var(--ink-soft); line-height:1.8;
+    max-width:480px; margin:0 auto;
+  }
+  .hero .divider{
+    width:44px; height:1px; background:var(--gold);
+    margin:28px auto;
+  }
+
+  /* ---------- Category tabs ---------- */
+  .cat-tabs{
+    max-width:1200px; margin:0 auto;
+    display:flex; justify-content:center; gap:8px;
+    padding:0 32px 50px; flex-wrap:wrap;
+  }
+  .cat-tabs button{
+    font-family:'Pretendard',sans-serif;
+    background:transparent; border:1px solid var(--line);
+    color:var(--ink-soft); padding:10px 24px; border-radius:30px;
+    font-size:13px; letter-spacing:0.03em; cursor:pointer;
+    transition:.25s;
+  }
+  .cat-tabs button:hover{border-color:var(--gold); color:var(--ink);}
+  .cat-tabs button.active{
+    background:var(--ink); border-color:var(--ink); color:var(--ivory);
+  }
+
+  /* ---------- Product grid ---------- */
+  .grid-wrap{max-width:1200px; margin:0 auto; padding:0 32px 100px;}
+  .product-grid{
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:36px 28px;
+  }
+  .product-card{cursor:pointer;}
+  .product-media{
+    position:relative;
+    background:var(--white);
+    border:1px solid var(--line);
+    aspect-ratio:3/4;
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+    margin-bottom:16px;
+    transition:.35s;
+  }
+  .product-card:hover .product-media{border-color:var(--gold-soft); box-shadow:0 18px 36px -20px rgba(43,38,32,0.35);}
+  .product-card:hover .product-media svg{transform:scale(1.05);}
+  .product-media svg{width:62%; height:62%; transition:transform .5s ease;}
+  .badge{
+    position:absolute; top:14px; left:14px;
+    font-size:10px; letter-spacing:0.08em;
+    background:var(--ink); color:var(--ivory);
+    padding:5px 10px; text-transform:uppercase;
+  }
+  .badge.sale{background:var(--gold);}
+  .badge.soldout{background:#b8b0a1;}
+  .quick-add{
+    position:absolute; bottom:0; left:0; right:0;
+    background:var(--ink); color:var(--ivory);
+    text-align:center; font-size:12px; padding:12px;
+    letter-spacing:0.05em;
+    transform:translateY(100%); transition:.3s;
+  }
+  .product-card:hover .quick-add{transform:translateY(0);}
+  .product-info .name-en{
+    font-size:11px; color:var(--gold); letter-spacing:0.08em; margin-bottom:4px;
+  }
+  .product-info .name-kr{font-size:15px; color:var(--ink); margin-bottom:8px;}
+  .price-row{display:flex; align-items:center; gap:8px;}
+  .price{font-size:15px; font-weight:500; color:var(--ink);}
+  .price-original{font-size:13px; color:#b3aa9c; text-decoration:line-through;}
+  .discount{font-size:13px; color:var(--gold);}
+
+  /* ---------- Modal ---------- */
+  .overlay{
+    position:fixed; inset:0; background:rgba(43,38,32,0.5);
+    display:none; align-items:center; justify-content:center;
+    z-index:200; padding:24px;
+  }
+  .overlay.open{display:flex;}
+  .modal{
+    background:var(--ivory); max-width:920px; width:100%;
+    max-height:88vh; overflow:auto;
+    display:grid; grid-template-columns:1fr 1fr;
+    box-shadow:0 30px 60px rgba(0,0,0,0.25);
+  }
+  .modal-media{
+    background:var(--white); display:flex; align-items:center; justify-content:center;
+    padding:40px; border-right:1px solid var(--line);
+  }
+  .modal-media svg{width:78%; height:78%;}
+  .modal-info{padding:44px 40px; position:relative;}
+  .modal-close{
+    position:absolute; top:18px; right:20px; background:none; border:none;
+    font-size:22px; color:var(--ink-soft); cursor:pointer; line-height:1;
+  }
+  .modal-info .name-en{font-size:12px; letter-spacing:0.1em; color:var(--gold); margin-bottom:8px;}
+  .modal-info h2{font-family:'Cormorant Garamond',serif; font-size:30px; font-weight:500; margin-bottom:14px;}
+  .modal-info .price{font-size:20px; margin-bottom:20px; display:block;}
+  .modal-info .desc{font-size:13.5px; color:var(--ink-soft); line-height:1.9; margin-bottom:26px;}
+  .option-label{font-size:12px; letter-spacing:0.05em; color:var(--ink-soft); margin-bottom:10px;}
+  .size-row{display:flex; gap:8px; margin-bottom:26px;}
+  .size-btn{
+    width:42px; height:42px; border:1px solid var(--line); background:transparent;
+    font-size:13px; cursor:pointer; color:var(--ink); transition:.2s;
+  }
+  .size-btn:hover{border-color:var(--gold);}
+  .size-btn.selected{background:var(--ink); border-color:var(--ink); color:var(--ivory);}
+  .qty-row{display:flex; align-items:center; gap:16px; margin-bottom:30px;}
+  .qty-control{display:flex; align-items:center; border:1px solid var(--line);}
+  .qty-control button{width:34px; height:36px; border:none; background:none; cursor:pointer; font-size:15px;}
+  .qty-control span{width:34px; text-align:center; font-size:14px;}
+  .btn-row{display:flex; gap:10px;}
+  .btn{
+    flex:1; padding:15px; font-size:13px; letter-spacing:0.05em; cursor:pointer;
+    border:1px solid var(--ink); background:transparent; color:var(--ink);
+    transition:.25s;
+  }
+  .btn.primary{background:var(--ink); color:var(--ivory);}
+  .btn.primary:hover{background:#000;}
+  .btn:hover{background:var(--ink); color:var(--ivory);}
+  .btn:disabled{opacity:0.4; cursor:not-allowed;}
+  .btn:disabled:hover{background:transparent; color:var(--ink);}
+
+  /* ---------- Cart drawer ---------- */
+  .cart-drawer{
+    position:fixed; top:0; right:-420px; width:400px; height:100%;
+    background:var(--ivory); box-shadow:-10px 0 40px rgba(0,0,0,0.15);
+    z-index:300; transition:right .35s ease; display:flex; flex-direction:column;
+  }
+  .cart-drawer.open{right:0;}
+  .cart-head{display:flex; justify-content:space-between; align-items:center; padding:26px 28px; border-bottom:1px solid var(--line);}
+  .cart-head h3{font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:500;}
+  .cart-items{flex:1; overflow:auto; padding:10px 28px;}
+  .cart-item{display:flex; gap:14px; padding:18px 0; border-bottom:1px solid var(--line);}
+  .cart-item .mini-media{width:64px; height:80px; background:var(--white); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .cart-item .mini-media svg{width:70%; height:70%;}
+  .cart-item-info{flex:1;}
+  .cart-item-info .n{font-size:13.5px; margin-bottom:4px;}
+  .cart-item-info .o{font-size:11px; color:var(--ink-soft); margin-bottom:6px;}
+  .cart-item-info .p{font-size:13px; font-weight:500;}
+  .cart-item-remove{background:none; border:none; color:var(--ink-soft); font-size:12px; cursor:pointer; text-decoration:underline;}
+  .cart-empty{padding:60px 0; text-align:center; color:var(--ink-soft); font-size:13px;}
+  .cart-foot{padding:24px 28px 30px; border-top:1px solid var(--line);}
+  .cart-total-row{display:flex; justify-content:space-between; font-size:14px; margin-bottom:18px;}
+  .cart-total-row .amt{font-size:19px; font-weight:600;}
+  .pay-note{margin-top:10px; font-size:11px; color:var(--ink-soft); text-align:center; display:flex; align-items:center; justify-content:center; gap:6px;}
+  .pay-note .dot{width:8px; height:8px; border-radius:50%; background:#FEE500; display:inline-block;}
+  .scrim{position:fixed; inset:0; background:rgba(43,38,32,0.4); z-index:290; display:none;}
+  .scrim.open{display:block;}
+
+  footer{
+    border-top:1px solid var(--line); margin-top:40px; padding:56px 32px 40px;
+    text-align:center; color:var(--ink-soft); font-size:12.5px; line-height:2;
+  }
+  footer .f-logo{font-family:'Cormorant Garamond',serif; font-size:22px; color:var(--ink); letter-spacing:0.2em; margin-bottom:14px;}
+
+  .toast{
+    position:fixed; bottom:32px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--ink); color:var(--ivory); padding:14px 26px; font-size:13px;
+    letter-spacing:0.03em; z-index:400; opacity:0; pointer-events:none; transition:.3s;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  @media(max-width:900px){
+    .product-grid{grid-template-columns:repeat(2,1fr);}
+    .hero h1{font-size:38px;}
+    .modal{grid-template-columns:1fr;}
+    .modal-media{border-right:none; border-bottom:1px solid var(--line);}
+    nav.main-nav{display:none;}
+    .cart-drawer{width:88vw; right:-88vw;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <a href="#" class="logo">LA SUITE</a>
+    <nav class="main-nav">
+      <a href="#" class="cat-link active" data-cat="all">ALL</a>
+      <a href="#" class="cat-link" data-cat="new">NEW</a>
+      <a href="#" class="cat-link" data-cat="outer">아우터</a>
+      <a href="#" class="cat-link" data-cat="dress">원피스</a>
+      <a href="#" class="cat-link" data-cat="top">상의</a>
+      <a href="#" class="cat-link" data-cat="bottom">하의</a>
+      <a href="#" class="cat-link" data-cat="knit">니트</a>
+    </nav>
+    <div class="header-icons">
+      <button class="icon-btn" id="cartBtn">BAG<span class="cart-count" id="cartCount">0</span></button>
+    </div>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="eyebrow">2026 Autumn Collection</div>
+  <h1 class="serif">조용한 우아함,<br>당신의 일상이 되다</h1>
+  <div class="divider"></div>
+  <p>절제된 실루엣과 좋은 원단이 만드는 균형. LA SUITE는 과하지 않은 아름다움을 만듭니다.</p>
+</section>
+
+<div class="cat-tabs" id="catTabs">
+  <button data-cat="all" class="active">전체</button>
+  <button data-cat="new">NEW</button>
+  <button data-cat="outer">아우터</button>
+  <button data-cat="dress">원피스</button>
+  <button data-cat="top">상의</button>
+  <button data-cat="bottom">하의</button>
+  <button data-cat="knit">니트</button>
+</div>
+
+<div class="grid-wrap">
+  <div class="product-grid" id="productGrid"></div>
+</div>
+
+<footer>
+  <div class="f-logo">LA SUITE</div>
+  <div>상호 라스윗(LA SUITE)&nbsp;·&nbsp;대표 홍길동&nbsp;·&nbsp;사업자등록번호 000-00-00000</div>
+  <div>고객센터 1588-0000&nbsp;(평일 10:00–17:00, 점심 12:30–13:30)</div>
+  <div>© 2026 LA SUITE. All rights reserved.</div>
+</footer>
+
+<div class="scrim" id="scrim"></div>
+
+<div class="cart-drawer" id="cartDrawer">
+  <div class="cart-head">
+    <h3 class="serif">SHOPPING BAG</h3>
+    <button class="modal-close" id="cartClose">&times;</button>
+  </div>
+  <div class="cart-items" id="cartItems"></div>
+  <div class="cart-foot">
+    <div class="cart-total-row"><span>총 상품금액</span><span class="amt" id="cartTotal">0원</span></div>
+    <button class="btn primary" id="checkoutBtn" style="width:100%">카카오페이로 결제하기</button>
+    <div class="pay-note"><span class="dot"></span>카카오페이 간편결제로 안전하게 결제됩니다</div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal" id="modalBody"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const won = n => n.toLocaleString('ko-KR') + '원';
+
+const shapes = {
+  dress: `<svg viewBox="0 0 200 260" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M78 20 L70 45 L55 60 L48 240 L152 240 L145 60 L130 45 L122 20"/>
+    <path d="M78 20 Q100 32 122 20"/>
+    <path d="M70 45 L100 62 L130 45"/>
+    <path d="M55 60 L48 100"/><path d="M145 60 L152 100"/>
+  </svg>`,
+  coat: `<svg viewBox="0 0 200 260" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M100 24 L60 46 L40 235 L78 235 L84 90 L100 70 L116 90 L122 235 L160 235 L140 46 Z"/>
+    <path d="M100 24 L88 55 L100 75 L112 55 Z"/>
+    <path d="M60 46 L30 95 M140 46 L170 95"/>
+    <line x1="100" y1="95" x2="100" y2="230"/>
+  </svg>`,
+  blouse: `<svg viewBox="0 0 200 260" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M100 34 L66 52 L45 130 L62 138 L72 96 L72 220 L128 220 L128 96 L138 138 L155 130 L134 52 Z"/>
+    <path d="M100 34 L90 58 L100 78 L110 58 Z"/>
+    <line x1="100" y1="78" x2="100" y2="220"/>
+  </svg>`,
+  pants: `<svg viewBox="0 0 200 260" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M62 30 L138 30 L146 130 L172 232 L146 236 L104 140 L96 140 L86 236 L54 232 L62 130 Z"/>
+    <line x1="62" y1="60" x2="138" y2="60"/>
+  </svg>`,
+  knit: `<svg viewBox="0 0 200 260" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M100 30 L62 48 L20 78 L38 108 L64 92 L58 230 L142 230 L136 92 L162 108 L180 78 L138 48 Z"/>
+    <path d="M100 30 Q100 50 100 62"/>
+    <line x1="30" y1="140" x2="52" y2="140" stroke-width="1.2"/>
+    <line x1="148" y1="140" x2="170" y2="140" stroke-width="1.2"/>
+    <line x1="65" y1="180" x2="135" y2="180" stroke-width="1.2"/>
+  </svg>`,
+  skirt: `<svg viewBox="0 0 200 260" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M78 40 L122 40 L150 220 L50 220 Z"/>
+    <line x1="86" y1="46" x2="72" y2="216" stroke-width="1.2"/>
+    <line x1="100" y1="46" x2="100" y2="218" stroke-width="1.2"/>
+    <line x1="114" y1="46" x2="128" y2="216" stroke-width="1.2"/>
+  </svg>`
+};
+
+const products = [
+  {id:1, en:'SILK SLIP DRESS', kr:'실크 슬립 원피스', price:189000, cat:['new','dress'], shape:'dress', tone:'#f1e4d8', desc:'매끄러운 실키 소재로 은은한 광택과 부드러운 드레이프가 돋보이는 슬립 원피스입니다. 이너로 겹쳐 입거나 단독으로 착용하기 좋습니다.'},
+  {id:2, en:'CASHMERE BLEND COAT', kr:'울 캐시미어 코트', price:328000, cat:['new','outer'], shape:'coat', tone:'#e8ddcd', desc:'울과 캐시미어를 혼방하여 가볍고 따뜻합니다. 깊은 카라와 넉넉한 실루엣으로 한 시즌 내내 활용도가 높습니다.'},
+  {id:3, en:'LINEN BLOUSE', kr:'리넨 블라우스', price:89000, cat:['top'], shape:'blouse', tone:'#f4f1ea', desc:'통기성이 좋은 리넨 원단으로 사계절 활용 가능한 베이직 블라우스. 은은한 셔링 디테일이 여성스러움을 더합니다.'},
+  {id:4, en:'WIDE STRAIGHT TROUSERS', kr:'하이웨이스트 와이드 팬츠', price:98000, cat:['bottom'], shape:'pants', tone:'#eae6dd', desc:'허리 라인을 살려주는 하이웨이스트 핏과 떨어지는 일자 라인이 다리를 길어 보이게 합니다.'},
+  {id:5, en:'CABLE KNIT SWEATER', kr:'케이블 니트 스웨터', price:118000, cat:['knit'], shape:'knit', tone:'#efe4d3', desc:'클래식한 케이블 패턴의 순모 혼방 니트. 포근한 촉감과 적당한 볼륨감으로 데일리 착용에 좋습니다.', sale:true, originalPrice:148000},
+  {id:6, en:'PLEATED MIDI SKIRT', kr:'플리츠 미디 스커트', price:105000, cat:['bottom','new'], shape:'skirt', tone:'#f6efe6', desc:'섬세한 플리츠가 움직임마다 자연스러운 실루엣을 만드는 미디 기장 스커트입니다.'},
+  {id:7, en:'CLASSIC TRENCH COAT', kr:'트렌치 코트', price:259000, cat:['outer'], shape:'coat', tone:'#ece2d0', desc:'허리 벨트로 실루엣을 조절할 수 있는 클래식 트렌치 코트. 사계절 아우터로 완성도 높은 선택입니다.'},
+  {id:8, en:'V-NECK KNIT DRESS', kr:'브이넥 니트 원피스', price:138000, cat:['dress','knit'], shape:'dress', tone:'#f2e9dc', desc:'부드러운 니트 소재의 브이넥 원피스로 여성스러운 실루엣과 편안한 착용감을 동시에 제공합니다.'},
+  {id:9, en:'SATIN CAMISOLE TOP', kr:'새틴 캐미솔 탑', price:59000, cat:['top','new'], shape:'blouse', tone:'#f3ece1', desc:'광택있는 새틴 소재의 캐미솔 탑. 레이어링 아이템으로도, 단독 착용으로도 우아합니다.'},
+  {id:10, en:'TAILORED WOOL SKIRT', kr:'테일러드 울 스커트', price:112000, cat:['bottom'], shape:'skirt', tone:'#efe6d6', desc:'탄탄한 울 소재와 깔끔한 라인이 돋보이는 테일러드 스커트. 오피스룩에도 잘 어울립니다.', soldout:true},
+  {id:11, en:'BOUCLE JACKET', kr:'부클 트위드 자켓', price:215000, cat:['outer','new'], shape:'coat', tone:'#f0e7da', desc:'클래식한 부클 소재의 트위드 자켓. 짧은 기장으로 스커트, 팬츠 어디에나 잘 어울립니다.'},
+  {id:12, en:'RIBBED KNIT TOP', kr:'리브 니트 탑', price:69000, cat:['top','knit'], shape:'blouse', tone:'#f4eee2', desc:'몸에 자연스럽게 붙는 리브 조직의 니트 탑으로 하의와 매치하기 좋은 기본 아이템입니다.'}
+];
+
+let currentCat = 'all';
+let cart = [];
+
+function renderGrid(){
+  const grid = document.getElementById('productGrid');
+  grid.innerHTML = '';
+  const list = products.filter(p => currentCat === 'all' || p.cat.includes(currentCat));
+  list.forEach(p => {
+    const card = document.createElement('div');
+    card.className = 'product-card';
+    card.innerHTML = `
+      <div class="product-media" style="background:${p.tone}22;color:${p.soldout ? '#c2bcae' : '#3a332a'}">
+        ${p.cat.includes('new') && !p.soldout ? '<span class="badge">NEW</span>' : ''}
+        ${p.sale ? '<span class="badge sale">SALE</span>' : ''}
+        ${p.soldout ? '<span class="badge soldout">SOLD OUT</span>' : ''}
+        ${shapes[p.shape]}
+        ${!p.soldout ? '<div class="quick-add">빠른 보기</div>' : ''}
+      </div>
+      <div class="product-info">
+        <div class="name-en">${p.en}</div>
+        <div class="name-kr">${p.kr}</div>
+        <div class="price-row">
+          ${p.originalPrice ? `<span class="price-original">${won(p.originalPrice)}</span><span class="discount">${Math.round((1-p.price/p.originalPrice)*100)}%</span>` : ''}
+          <span class="price">${won(p.price)}</span>
+        </div>
+      </div>
+    `;
+    card.addEventListener('click', () => openModal(p));
+    grid.appendChild(card);
+  });
+}
+
+document.querySelectorAll('#catTabs button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#catTabs button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentCat = btn.dataset.cat;
+    renderGrid();
+  });
+});
+
+let selectedSize = null;
+let selectedQty = 1;
+
+function openModal(p){
+  selectedSize = null;
+  selectedQty = 1;
+  const modal = document.getElementById('modalBody');
+  modal.innerHTML = `
+    <div class="modal-media" style="background:${p.tone}22;color:#3a332a">${shapes[p.shape]}</div>
+    <div class="modal-info">
+      <button class="modal-close" id="modalClose">&times;</button>
+      <div class="name-en">${p.en}</div>
+      <h2 class="serif">${p.kr}</h2>
+      <span class="price">${won(p.price)}</span>
+      <p class="desc">${p.desc}</p>
+      <div class="option-label">SIZE</div>
+      <div class="size-row" id="sizeRow">
+        ${['S','M','L'].map(s => `<button class="size-btn" data-size="${s}" ${p.soldout ? 'disabled' : ''}>${s}</button>`).join('')}
+      </div>
+      <div class="option-label">수량</div>
+      <div class="qty-row">
+        <div class="qty-control">
+          <button id="qtyMinus" ${p.soldout ? 'disabled' : ''}>−</button>
+          <span id="qtyVal">1</span>
+          <button id="qtyPlus" ${p.soldout ? 'disabled' : ''}>+</button>
+        </div>
+        <span style="font-size:13px;color:var(--ink-soft)">소계 <b id="subtotal" style="color:var(--ink)">${won(p.price)}</b></span>
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" id="addToCartBtn" ${p.soldout ? 'disabled' : ''}>${p.soldout ? '품절' : '장바구니 담기'}</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('modalClose').addEventListener('click', closeModal);
+
+  document.querySelectorAll('#sizeRow .size-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#sizeRow .size-btn').forEach(x => x.classList.remove('selected'));
+      b.classList.add('selected');
+      selectedSize = b.dataset.size;
+    });
+  });
+  const qtyVal = document.getElementById('qtyVal');
+  const subtotal = document.getElementById('subtotal');
+  document.getElementById('qtyMinus')?.addEventListener('click', () => {
+    if(selectedQty > 1){ selectedQty--; qtyVal.textContent = selectedQty; subtotal.textContent = won(p.price*selectedQty); }
+  });
+  document.getElementById('qtyPlus')?.addEventListener('click', () => {
+    selectedQty++; qtyVal.textContent = selectedQty; subtotal.textContent = won(p.price*selectedQty);
+  });
+  document.getElementById('addToCartBtn')?.addEventListener('click', () => {
+    if(!selectedSize){ showToast('사이즈를 선택해 주세요'); return; }
+    cart.push({...p, size: selectedSize, qty: selectedQty});
+    renderCart();
+    closeModal();
+    showToast(`${p.kr}(${selectedSize}) 장바구니에 담았습니다`);
+  });
+}
+
+function closeModal(){ document.getElementById('overlay').classList.remove('open'); }
+document.getElementById('overlay').addEventListener('click', e => { if(e.target.id === 'overlay') closeModal(); });
+
+function renderCart(){
+  document.getElementById('cartCount').textContent = cart.reduce((s,i) => s+i.qty, 0);
+  const wrap = document.getElementById('cartItems');
+  if(cart.length === 0){
+    wrap.innerHTML = '<div class="cart-empty">장바구니가 비어 있습니다</div>';
+  } else {
+    wrap.innerHTML = cart.map((item, idx) => `
+      <div class="cart-item">
+        <div class="mini-media" style="background:${item.tone}22;color:#3a332a">${shapes[item.shape]}</div>
+        <div class="cart-item-info">
+          <div class="n">${item.kr}</div>
+          <div class="o">${item.size} / ${item.qty}개</div>
+          <div class="p">${won(item.price*item.qty)}</div>
+          <button class="cart-item-remove" data-idx="${idx}">삭제</button>
+        </div>
+      </div>
+    `).join('');
+    wrap.querySelectorAll('.cart-item-remove').forEach(btn => {
+      btn.addEventListener('click', () => { cart.splice(+btn.dataset.idx, 1); renderCart(); });
+    });
+  }
+  document.getElementById('cartTotal').textContent = won(cart.reduce((s,i) => s+i.price*i.qty, 0));
+}
+
+const cartDrawer = document.getElementById('cartDrawer');
+const scrim = document.getElementById('scrim');
+document.getElementById('cartBtn').addEventListener('click', () => { cartDrawer.classList.add('open'); scrim.classList.add('open'); });
+document.getElementById('cartClose').addEventListener('click', closeCart);
+scrim.addEventListener('click', closeCart);
+function closeCart(){ cartDrawer.classList.remove('open'); scrim.classList.remove('open'); }
+
+let toastTimer;
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+document.querySelectorAll('.cat-link').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    document.querySelectorAll('.cat-link').forEach(x => x.classList.remove('active'));
+    a.classList.add('active');
+    currentCat = a.dataset.cat;
+    document.querySelectorAll('#catTabs button').forEach(b => b.classList.toggle('active', b.dataset.cat === currentCat));
+    renderGrid();
+    window.scrollTo({top: document.querySelector('.cat-tabs').offsetTop - 80, behavior:'smooth'});
+  });
+});
+
+function getPartnerUserId(){
+  let id = localStorage.getItem('lasuite_guest_id');
+  if(!id){
+    id = (crypto.randomUUID ? crypto.randomUUID() : 'guest-' + Date.now() + '-' + Math.random().toString(16).slice(2));
+    localStorage.setItem('lasuite_guest_id', id);
+  }
+  return id;
+}
+
+async function handleCheckout(){
+  if(cart.length === 0){ showToast('장바구니가 비어 있습니다'); return; }
+  const btn = document.getElementById('checkoutBtn');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '카카오페이 연결 중...';
+  try{
+    const res = await fetch('/api/payment/ready', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        items: cart.map(i => ({kr: i.kr, price: i.price, qty: i.qty, size: i.size})),
+        partnerUserId: getPartnerUserId()
+      })
+    });
+    const data = await res.json();
+    if(!res.ok){
+      showToast(data.error || '결제 준비 중 오류가 발생했습니다');
+      btn.disabled = false; btn.textContent = originalText;
+      return;
+    }
+    const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+    window.location.href = (isMobile && data.mobileRedirectUrl) ? data.mobileRedirectUrl : data.redirectUrl;
+  } catch(err){
+    showToast('서버에 연결할 수 없습니다');
+    btn.disabled = false; btn.textContent = originalText;
+  }
+}
+
+document.getElementById('checkoutBtn').addEventListener('click', handleCheckout);
+
+renderGrid();
+renderCart();
+</script>
+</body>
+</html>

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LA SUITE — 결제 결과</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,400&family=Pretendard:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ivory:#f7f4ef; --ink:#2b2620; --ink-soft:#6b6459;
+    --gold:#a9895f; --line:#e2dbcd; --white:#ffffff;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{
+    font-family:'Pretendard',sans-serif; background:var(--ivory); color:var(--ink);
+    min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;
+  }
+  .serif{font-family:'Cormorant Garamond',serif;}
+  .card{
+    background:var(--white); border:1px solid var(--line);
+    max-width:420px; width:100%; padding:52px 40px; text-align:center;
+  }
+  .icon{width:56px; height:56px; margin:0 auto 24px; border-radius:50%; display:flex; align-items:center; justify-content:center;}
+  .icon.success{background:#eef3ea; color:#5c8a52;}
+  .icon.fail{background:#f5eae7; color:#b5624a;}
+  .icon.cancel{background:#f1ede5; color:var(--ink-soft);}
+  .icon svg{width:26px; height:26px;}
+  .logo{font-family:'Cormorant Garamond',serif; font-size:20px; letter-spacing:0.2em; color:var(--gold); margin-bottom:20px;}
+  h1{font-family:'Cormorant Garamond',serif; font-weight:500; font-size:28px; margin-bottom:12px;}
+  p.desc{font-size:13.5px; color:var(--ink-soft); line-height:1.8; margin-bottom:28px;}
+  .order-box{
+    border-top:1px solid var(--line); border-bottom:1px solid var(--line);
+    padding:20px 0; margin-bottom:30px; text-align:left; display:none;
+  }
+  .order-box.show{display:block;}
+  .order-row{display:flex; justify-content:space-between; font-size:13px; padding:4px 0; color:var(--ink-soft);}
+  .order-row b{color:var(--ink); font-weight:500;}
+  .order-row.total{margin-top:8px; padding-top:10px; border-top:1px dashed var(--line); font-size:14px;}
+  .order-row.total b{font-size:17px; font-weight:600;}
+  .btn{
+    display:inline-block; width:100%; padding:15px; font-size:13px; letter-spacing:0.05em;
+    background:var(--ink); color:var(--ivory); text-decoration:none; border:1px solid var(--ink);
+    transition:.25s;
+  }
+  .btn:hover{background:#000;}
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">LA SUITE</div>
+    <div id="iconWrap"></div>
+    <h1 id="title" class="serif"></h1>
+    <p class="desc" id="desc"></p>
+    <div class="order-box" id="orderBox">
+      <div class="order-row"><span>주문번호</span><b id="orderIdText">-</b></div>
+      <div class="order-row" id="itemsRow"><span>상품</span><b id="itemsText">-</b></div>
+      <div class="order-row total"><span>결제금액</span><b id="amountText">0원</b></div>
+    </div>
+    <a href="/" class="btn">쇼핑 계속하기</a>
+  </div>
+
+<script>
+const won = n => Number(n).toLocaleString('ko-KR') + '원';
+const params = new URLSearchParams(window.location.search);
+const status = params.get('status');
+const orderId = params.get('order');
+
+const icons = {
+  success: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>',
+  fail: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+  cancel: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 1 3 6.2"/><path d="M4 12V6M4 12h6"/></svg>'
+};
+
+const iconWrap = document.getElementById('iconWrap');
+const title = document.getElementById('title');
+const desc = document.getElementById('desc');
+
+if(status === 'success'){
+  iconWrap.innerHTML = `<div class="icon success">${icons.success}</div>`;
+  title.textContent = '결제가 완료되었습니다';
+  desc.textContent = '카카오페이 결제가 정상적으로 승인되었습니다.';
+  document.getElementById('orderBox').classList.add('show');
+  document.getElementById('orderIdText').textContent = orderId || '-';
+  document.getElementById('amountText').textContent = won(params.get('amount') || 0);
+
+  if(orderId){
+    fetch(`/api/orders/${orderId}`).then(r => r.json()).then(data => {
+      if(data.items){
+        const names = data.items.map(i => `${i.kr}(${i.size}) x${i.qty}`).join(', ');
+        document.getElementById('itemsText').textContent = names;
+      }
+    }).catch(() => {});
+  }
+} else if(status === 'cancel'){
+  iconWrap.innerHTML = `<div class="icon cancel">${icons.cancel}</div>`;
+  title.textContent = '결제를 취소했습니다';
+  desc.textContent = '결제가 진행되지 않았습니다. 장바구니의 상품은 그대로 남아 있습니다.';
+} else {
+  iconWrap.innerHTML = `<div class="icon fail">${icons.fail}</div>`;
+  title.textContent = '결제에 실패했습니다';
+  desc.textContent = '결제 처리 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.';
+}
+</script>
+</body>
+</html>
