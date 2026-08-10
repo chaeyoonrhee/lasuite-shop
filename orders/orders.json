@@ -1,0 +1,16 @@
+[
+  {
+    "partner_order_id": "test1234567890abcdef",
+    "items": [
+      {
+        "kr": "테스트 상품",
+        "price": 10000,
+        "qty": 1,
+        "size": "M"
+      }
+    ],
+    "total_amount": 10000,
+    "partner_user_id": "test-user",
+    "approved_at": "2026-08-10T15:00:00"
+  }
+]
