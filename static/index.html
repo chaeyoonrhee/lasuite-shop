@@ -183,6 +183,20 @@
     padding:40px; border-right:1px solid var(--line);
   }
   .modal-media svg{width:78%; height:78%;}
+  .modal-media img{max-width:100%; max-height:56vh; aspect-ratio:1/1; object-fit:cover;}
+  .thumb-row{display:flex; gap:8px; margin-top:14px; width:100%;}
+  .thumb-row .thumb{width:56px; height:56px; object-fit:cover; cursor:pointer; border:1px solid var(--line); opacity:0.6; transition:.2s;}
+  .thumb-row .thumb.selected{opacity:1; border-color:var(--gold);}
+  .color-row{display:flex; gap:10px; margin-bottom:26px; flex-wrap:wrap;}
+  .color-swatch{
+    width:30px; height:30px; border-radius:50%; cursor:pointer;
+    border:2px solid transparent; box-shadow:0 0 0 1px var(--line); transition:.2s;
+  }
+  .color-swatch.selected{box-shadow:0 0 0 2px var(--gold);}
+  .info-accordion{margin-top:8px; border-top:1px solid var(--line);}
+  .info-block{padding:16px 0; border-bottom:1px solid var(--line);}
+  .info-block b{font-size:12px; letter-spacing:0.05em; display:block; margin-bottom:8px;}
+  .info-block p{font-size:12.5px; color:var(--ink-soft); line-height:1.8;}
   .modal-info{padding:44px 40px; position:relative;}
   .modal-close{
     position:absolute; top:18px; right:20px; background:none; border:none;
@@ -236,8 +250,18 @@
   .cart-item-remove{background:none; border:none; color:var(--ink-soft); font-size:12px; cursor:pointer; text-decoration:underline;}
   .cart-empty{padding:60px 0; text-align:center; color:var(--ink-soft); font-size:13px;}
   .cart-foot{padding:24px 28px 30px; border-top:1px solid var(--line);}
-  .cart-total-row{display:flex; justify-content:space-between; font-size:14px; margin-bottom:18px;}
-  .cart-total-row .amt{font-size:19px; font-weight:600;}
+  .cart-total-row{display:flex; justify-content:space-between; font-size:14px; margin-bottom:10px;}
+  .cart-total-row .amt{font-size:16px; font-weight:600;}
+  .cart-total-row.sub{font-size:12.5px; color:var(--ink-soft);}
+  .cart-total-row.sub .amt{font-size:13px; font-weight:500;}
+  .cart-total-row.grand{margin-top:6px; padding-top:12px; border-top:1px dashed var(--line); margin-bottom:20px;}
+  .cart-total-row.grand .amt{font-size:20px;}
+  .shipping-form{margin-bottom:20px;}
+  .shipping-form input{
+    width:100%; padding:12px 13px; border:1px solid var(--line); background:var(--white);
+    font-family:inherit; font-size:13px; margin-bottom:8px; box-sizing:border-box;
+  }
+  .shipping-form input:focus{outline:none; border-color:var(--gold);}
   .pay-note{margin-top:10px; font-size:11px; color:var(--ink-soft); text-align:center; display:flex; align-items:center; justify-content:center; gap:6px;}
   .pay-note .dot{width:8px; height:8px; border-radius:50%; background:#FEE500; display:inline-block;}
   .scrim{position:fixed; inset:0; background:rgba(43,38,32,0.4); z-index:290; display:none;}
@@ -327,7 +351,17 @@
   </div>
   <div class="cart-items" id="cartItems"></div>
   <div class="cart-foot">
-    <div class="cart-total-row"><span>총 상품금액</span><span class="amt" id="cartTotal">0원</span></div>
+    <div class="cart-total-row"><span>상품금액</span><span class="amt" id="cartTotal">0원</span></div>
+    <div class="cart-total-row sub"><span>배송비</span><span class="amt" id="cartShipping">0원</span></div>
+    <div class="cart-total-row grand"><span>총 결제금액</span><span class="amt" id="cartGrandTotal">0원</span></div>
+
+    <div class="shipping-form">
+      <div class="option-label">배송 정보</div>
+      <input type="text" id="shipName" placeholder="받는 분 성함">
+      <input type="tel" id="shipPhone" placeholder="연락처 (010-0000-0000)">
+      <input type="text" id="shipAddress" placeholder="배송지 주소 (상세주소 포함)">
+    </div>
+
     <button class="btn primary" id="checkoutBtn" style="width:100%">카카오페이로 결제하기</button>
     <div class="pay-note"><span class="dot"></span>카카오페이 간편결제로 안전하게 결제됩니다</div>
   </div>
@@ -379,7 +413,30 @@ const shapes = {
   </svg>`
 };
 
-const products = [];
+const products = [
+  {
+    id: 1, en: 'DRAGON BAG', kr: '드레곤백 (이너백 포함)',
+    price: 50000, shippingFee: 3500,
+    cat: ['bag', 'new'], material: '합성피혁(에코레더)',
+    desc: '이너백이 함께 구성되어 수납이 편리하고, 촘촘한 위빙 디테일과 꼼꼼한 마감으로 데일리백으로 오래 사용하실 수 있는 퀄리티 좋은 가방입니다.',
+    sizeGuide: '가로 약 32cm / 높이 약 17cm / 밑폭 약 10cm / 손잡이 길이 약 24cm',
+    notices: [
+      '색상은 모니터 해상도 및 설정에 따라 실제 색상과 다소 차이가 있을 수 있습니다.',
+      '사이즈는 재는 위치에 따라 약 2~5cm 오차가 있을 수 있습니다.'
+    ],
+    orderNotice: '라스윗의 모든 제품은 주문 후 거래처 오더 방식으로 진행됩니다. 주문 시 3~7일 정도 소요되며, 리오더 상품의 경우 7~14일까지 소요될 수 있으니 여유롭게 주문 부탁드립니다. 부분 배송은 어려우며, 배송비를 추가하시면 부분 배송이 가능하니 참고 부탁드립니다.',
+    returnNotice: '주문 후 집화(발송) 완료 후 취소하시면 왕복 배송비가 부과될 수 있으니, 신중히 고려하신 후 주문 부탁드립니다.',
+    colors: [
+      {key:'ivory', label:'아이보리', hex:'#ece5d8', images:['images/dragon-bag/ivory_1.jpg','images/dragon-bag/ivory_2.jpg']},
+      {key:'camel', label:'카멜', hex:'#b9773f', images:['images/dragon-bag/camel_1.jpg','images/dragon-bag/camel_2.jpg']},
+      {key:'green', label:'연두', hex:'#92a054', images:['images/dragon-bag/green_1.jpg','images/dragon-bag/green_2.jpg']},
+      {key:'blue', label:'딥블루', hex:'#2b3a55', images:['images/dragon-bag/blue_1.jpg']},
+      {key:'black', label:'블랙', hex:'#1c1c1c', images:['images/dragon-bag/black_1.jpg','images/dragon-bag/black_2.jpg']},
+      {key:'brown', label:'브라운', hex:'#3f2a1d', images:['images/dragon-bag/brown_1.jpg','images/dragon-bag/brown_2.jpg']}
+    ],
+    innerBagImage: 'images/dragon-bag/innerbag_1.jpg'
+  }
+];
 
 let currentCat = 'all';
 let cart = [];
@@ -400,12 +457,13 @@ function renderGrid(){
   list.forEach(p => {
     const card = document.createElement('div');
     card.className = 'product-card';
+    const thumb = p.colors ? p.colors[0].images[0] : null;
     card.innerHTML = `
-      <div class="product-media" style="background:${p.tone}22;color:${p.soldout ? '#c2bcae' : '#3a332a'}">
+      <div class="product-media" style="background:${thumb ? '#fff' : p.tone+'22'};color:${p.soldout ? '#c2bcae' : '#3a332a'}">
         ${p.cat.includes('new') && !p.soldout ? '<span class="badge">NEW</span>' : ''}
         ${p.sale ? '<span class="badge sale">SALE</span>' : ''}
         ${p.soldout ? '<span class="badge soldout">SOLD OUT</span>' : ''}
-        ${shapes[p.shape]}
+        ${thumb ? `<img src="${thumb}" alt="${p.kr}" style="width:100%;height:100%;object-fit:cover;">` : shapes[p.shape]}
         ${!p.soldout ? '<div class="quick-add">빠른 보기</div>' : ''}
       </div>
       <div class="product-info">
@@ -433,23 +491,43 @@ document.querySelectorAll('#catTabs button').forEach(btn => {
 
 let selectedSize = null;
 let selectedQty = 1;
+let selectedColorIdx = 0;
+let selectedImageIdx = 0;
 
 function openModal(p){
   selectedSize = null;
   selectedQty = 1;
+  selectedColorIdx = 0;
+  selectedImageIdx = 0;
   const modal = document.getElementById('modalBody');
+  const isBag = !!p.colors;
+
+  const mediaHtml = isBag
+    ? `<img id="modalMainImg" src="${p.colors[0].images[0]}" alt="${p.kr}" style="width:100%;height:100%;object-fit:cover;">`
+    : shapes[p.shape];
+
   modal.innerHTML = `
-    <div class="modal-media" style="background:${p.tone}22;color:#3a332a">${shapes[p.shape]}</div>
+    <div class="modal-media" style="background:${isBag ? '#fff' : p.tone+'22'};color:#3a332a;flex-direction:column;">
+      ${mediaHtml}
+      ${isBag ? `<div class="thumb-row" id="thumbRow"></div>` : ''}
+    </div>
     <div class="modal-info">
       <button class="modal-close" id="modalClose">&times;</button>
       <div class="name-en">${p.en}</div>
       <h2 class="serif">${p.kr}</h2>
       <span class="price">${won(p.price)}</span>
       <p class="desc">${p.desc}</p>
-      <div class="option-label">SIZE</div>
-      <div class="size-row" id="sizeRow">
-        ${['S','M','L'].map(s => `<button class="size-btn" data-size="${s}" ${p.soldout ? 'disabled' : ''}>${s}</button>`).join('')}
-      </div>
+      ${isBag ? `
+        <div class="option-label">COLOR — <span id="colorLabel">${p.colors[0].label}</span></div>
+        <div class="color-row" id="colorRow">
+          ${p.colors.map((c,i) => `<button class="color-swatch ${i===0?'selected':''}" data-idx="${i}" style="background:${c.hex}" title="${c.label}"></button>`).join('')}
+        </div>
+      ` : `
+        <div class="option-label">SIZE</div>
+        <div class="size-row" id="sizeRow">
+          ${['S','M','L'].map(s => `<button class="size-btn" data-size="${s}" ${p.soldout ? 'disabled' : ''}>${s}</button>`).join('')}
+        </div>
+      `}
       <div class="option-label">수량</div>
       <div class="qty-row">
         <div class="qty-control">
@@ -462,18 +540,62 @@ function openModal(p){
       <div class="btn-row">
         <button class="btn primary" id="addToCartBtn" ${p.soldout ? 'disabled' : ''}>${p.soldout ? '품절' : '장바구니 담기'}</button>
       </div>
+      ${isBag ? `
+        <div class="info-accordion">
+          <div class="info-block"><b>소재</b><p>${p.material}</p></div>
+          <div class="info-block"><b>사이즈</b><p>${p.sizeGuide}</p></div>
+          <div class="info-block"><b>안내사항</b><p>${p.notices.join('<br>')}</p></div>
+          <div class="info-block"><b>주문 시 유의사항</b><p>${p.orderNotice}</p></div>
+          <div class="info-block"><b>교환/반품 안내</b><p>${p.returnNotice}</p></div>
+        </div>
+      ` : ''}
     </div>
   `;
   document.getElementById('overlay').classList.add('open');
   document.getElementById('modalClose').addEventListener('click', closeModal);
 
-  document.querySelectorAll('#sizeRow .size-btn').forEach(b => {
-    b.addEventListener('click', () => {
-      document.querySelectorAll('#sizeRow .size-btn').forEach(x => x.classList.remove('selected'));
-      b.classList.add('selected');
-      selectedSize = b.dataset.size;
+  if(isBag){
+    const mainImg = document.getElementById('modalMainImg');
+    const thumbRow = document.getElementById('thumbRow');
+    const colorLabel = document.getElementById('colorLabel');
+
+    function renderThumbs(){
+      const imgs = p.colors[selectedColorIdx].images;
+      thumbRow.innerHTML = imgs.map((src,i) => `<img class="thumb ${i===selectedImageIdx?'selected':''}" data-idx="${i}" src="${src}">`).join('');
+      thumbRow.querySelectorAll('.thumb').forEach(t => {
+        t.addEventListener('click', () => {
+          selectedImageIdx = +t.dataset.idx;
+          mainImg.src = imgs[selectedImageIdx];
+          thumbRow.querySelectorAll('.thumb').forEach(x => x.classList.remove('selected'));
+          t.classList.add('selected');
+        });
+      });
+    }
+    renderThumbs();
+
+    document.querySelectorAll('#colorRow .color-swatch').forEach(b => {
+      b.addEventListener('click', () => {
+        document.querySelectorAll('#colorRow .color-swatch').forEach(x => x.classList.remove('selected'));
+        b.classList.add('selected');
+        selectedColorIdx = +b.dataset.idx;
+        selectedImageIdx = 0;
+        selectedSize = p.colors[selectedColorIdx].label;
+        colorLabel.textContent = p.colors[selectedColorIdx].label;
+        mainImg.src = p.colors[selectedColorIdx].images[0];
+        renderThumbs();
+      });
     });
-  });
+    selectedSize = p.colors[0].label;
+  } else {
+    document.querySelectorAll('#sizeRow .size-btn').forEach(b => {
+      b.addEventListener('click', () => {
+        document.querySelectorAll('#sizeRow .size-btn').forEach(x => x.classList.remove('selected'));
+        b.classList.add('selected');
+        selectedSize = b.dataset.size;
+      });
+    });
+  }
+
   const qtyVal = document.getElementById('qtyVal');
   const subtotal = document.getElementById('subtotal');
   document.getElementById('qtyMinus')?.addEventListener('click', () => {
@@ -483,8 +605,9 @@ function openModal(p){
     selectedQty++; qtyVal.textContent = selectedQty; subtotal.textContent = won(p.price*selectedQty);
   });
   document.getElementById('addToCartBtn')?.addEventListener('click', () => {
-    if(!selectedSize){ showToast('사이즈를 선택해 주세요'); return; }
-    cart.push({...p, size: selectedSize, qty: selectedQty});
+    if(!selectedSize){ showToast(isBag ? '색상을 선택해 주세요' : '사이즈를 선택해 주세요'); return; }
+    const thumb = isBag ? p.colors[selectedColorIdx].images[0] : null;
+    cart.push({...p, size: selectedSize, qty: selectedQty, thumb});
     renderCart();
     closeModal();
     showToast(`${p.kr}(${selectedSize}) 장바구니에 담았습니다`);
@@ -502,7 +625,7 @@ function renderCart(){
   } else {
     wrap.innerHTML = cart.map((item, idx) => `
       <div class="cart-item">
-        <div class="mini-media" style="background:${item.tone}22;color:#3a332a">${shapes[item.shape]}</div>
+        <div class="mini-media" style="background:${item.thumb ? '#fff' : item.tone+'22'};color:#3a332a">${item.thumb ? `<img src="${item.thumb}" style="width:100%;height:100%;object-fit:cover;">` : shapes[item.shape]}</div>
         <div class="cart-item-info">
           <div class="n">${item.kr}</div>
           <div class="o">${item.size} / ${item.qty}개</div>
@@ -515,7 +638,11 @@ function renderCart(){
       btn.addEventListener('click', () => { cart.splice(+btn.dataset.idx, 1); renderCart(); });
     });
   }
-  document.getElementById('cartTotal').textContent = won(cart.reduce((s,i) => s+i.price*i.qty, 0));
+  const itemsTotal = cart.reduce((s,i) => s+i.price*i.qty, 0);
+  const shippingFee = cart.length ? Math.max(...cart.map(i => i.shippingFee || 0)) : 0;
+  document.getElementById('cartTotal').textContent = won(itemsTotal);
+  document.getElementById('cartShipping').textContent = won(shippingFee);
+  document.getElementById('cartGrandTotal').textContent = won(itemsTotal + shippingFee);
 }
 
 const cartDrawer = document.getElementById('cartDrawer');
@@ -557,16 +684,28 @@ function getPartnerUserId(){
 
 async function handleCheckout(){
   if(cart.length === 0){ showToast('장바구니가 비어 있습니다'); return; }
+
+  const shipName = document.getElementById('shipName').value.trim();
+  const shipPhone = document.getElementById('shipPhone').value.trim();
+  const shipAddress = document.getElementById('shipAddress').value.trim();
+  if(!shipName || !shipPhone || !shipAddress){
+    showToast('받는 분 성함, 연락처, 배송지 주소를 모두 입력해 주세요');
+    return;
+  }
+
   const btn = document.getElementById('checkoutBtn');
   const originalText = btn.textContent;
   btn.disabled = true;
   btn.textContent = '카카오페이 연결 중...';
   try{
+    const shippingFee = Math.max(...cart.map(i => i.shippingFee || 0));
     const res = await fetch('/api/payment/ready', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
         items: cart.map(i => ({kr: i.kr, price: i.price, qty: i.qty, size: i.size})),
+        shippingFee,
+        shipping: {name: shipName, phone: shipPhone, address: shipAddress},
         partnerUserId: getPartnerUserId()
       })
     });

@@ -91,12 +91,20 @@ def payment_ready():
     data = request.get_json(force=True, silent=True) or {}
     items = data.get("items") or []
     partner_user_id = data.get("partnerUserId") or "guest"
+    shipping = data.get("shipping") or {}
+    shipping_name = (shipping.get("name") or "").strip()
+    shipping_phone = (shipping.get("phone") or "").strip()
+    shipping_address = (shipping.get("address") or "").strip()
 
     if not items:
         return jsonify({"error": "장바구니가 비어 있습니다."}), 400
 
+    if not shipping_name or not shipping_phone or not shipping_address:
+        return jsonify({"error": "받는 분 성함, 연락처, 배송지 주소를 모두 입력해 주세요."}), 400
+
     try:
-        total_amount = sum(int(i["price"]) * int(i["qty"]) for i in items)
+        shipping_fee = int(data.get("shippingFee") or 0)
+        total_amount = sum(int(i["price"]) * int(i["qty"]) for i in items) + shipping_fee
         quantity = sum(int(i["qty"]) for i in items)
     except (KeyError, TypeError, ValueError):
         return jsonify({"error": "장바구니 항목 형식이 올바르지 않습니다."}), 400
@@ -133,6 +141,10 @@ def payment_ready():
         "tid": result["tid"],
         "items": items,
         "total_amount": total_amount,
+        "shipping_fee": shipping_fee,
+        "shipping_name": shipping_name,
+        "shipping_phone": shipping_phone,
+        "shipping_address": shipping_address,
         "partner_user_id": partner_user_id,
         "status": "READY",
     }
@@ -177,6 +189,10 @@ def payment_approve():
         "partner_order_id": partner_order_id,
         "items": order["items"],
         "total_amount": order["total_amount"],
+        "shipping_fee": order.get("shipping_fee", 0),
+        "shipping_name": order.get("shipping_name", ""),
+        "shipping_phone": order.get("shipping_phone", ""),
+        "shipping_address": order.get("shipping_address", ""),
         "partner_user_id": order["partner_user_id"],
         "approved_at": order["approved_at"],
     })
@@ -240,13 +256,16 @@ ADMIN_ORDERS_HTML = """
     {% if orders %}
       <div class="summary">총 {{ orders|length }}건 · 합계 {{ '{:,}'.format(total) }}원</div>
       <table>
-        <tr><th>주문시각</th><th>주문번호</th><th>상품</th><th>금액</th></tr>
+        <tr><th>주문시각</th><th>주문번호</th><th>상품</th><th>받는분</th><th>연락처</th><th>배송지</th><th>금액</th></tr>
         {% for o in orders %}
         <tr>
           <td>{{ o.approved_at or '-' }}</td>
           <td>{{ o.partner_order_id[:8] }}</td>
           <td>{% for it in o['items'] %}{{ it.kr }}({{ it.size }}) x{{ it.qty }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
-          <td class="amt">{{ '{:,}'.format(o.total_amount) }}원</td>
+          <td>{{ o.shipping_name or '-' }}</td>
+          <td>{{ o.shipping_phone or '-' }}</td>
+          <td>{{ o.shipping_address or '-' }}</td>
+          <td class="amt">{{ '{:,}'.format(o.total_amount) }}원{% if o.shipping_fee %}<br><span style="font-weight:400;color:#6b6459;font-size:11px;">(배송비 {{ '{:,}'.format(o.shipping_fee) }}원 포함)</span>{% endif %}</td>
         </tr>
         {% endfor %}
       </table>
