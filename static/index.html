@@ -418,6 +418,8 @@ const products = [
     id: 1, en: 'DRAGON BAG', kr: '드레곤백 (이너백 포함)',
     price: 50000, shippingFee: 3500,
     cat: ['bag', 'new'], material: '합성피혁(에코레더)',
+    hidden: true, // 카카오페이 실 결제 심사 승인 전까지 노출 보류
+
     desc: '이너백이 함께 구성되어 수납이 편리하고, 촘촘한 위빙 디테일과 꼼꼼한 마감으로 데일리백으로 오래 사용하실 수 있는 퀄리티 좋은 가방입니다.',
     sizeGuide: '가로 약 32cm / 높이 약 17cm / 밑폭 약 10cm / 손잡이 길이 약 24cm',
     notices: [
@@ -444,7 +446,7 @@ let cart = [];
 function renderGrid(){
   const grid = document.getElementById('productGrid');
   grid.innerHTML = '';
-  const list = products.filter(p => currentCat === 'all' || p.cat.includes(currentCat));
+  const list = products.filter(p => !p.hidden).filter(p => currentCat === 'all' || p.cat.includes(currentCat));
   if(list.length === 0){
     grid.innerHTML = `
       <div class="empty-state">
