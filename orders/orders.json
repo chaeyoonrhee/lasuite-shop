@@ -16,5 +16,26 @@
     "shipping_address": "서울시 용산구 대사관로 12길 3 발렛부스 안",
     "partner_user_id": "07a50e1d-ae97-4e20-abb8-0a7c4c48b5a8",
     "approved_at": "2026-08-12T10:21:48"
+  },
+  {
+    "partner_order_id": "771ac95781d44f93afdcefb135ae7a65",
+    "items": [
+      {
+        "kr": "드레곤백 (이너백 포함)",
+        "price": 48000,
+        "qty": 1,
+        "size": "아이보리"
+      }
+    ],
+    "total_amount": 51500,
+    "shipping_fee": 3500,
+    "shipping_name": "테스트",
+    "shipping_phone": "010-0000-0000",
+    "shipping_address": "테스트 주소",
+    "partner_user_id": "07a50e1d-ae97-4e20-abb8-0a7c4c48b5a8",
+    "payment_method": "bank_transfer",
+    "depositor_name": "테스트",
+    "status": "입금대기",
+    "approved_at": "2026-08-14T02:28:07"
   }
 ]
