@@ -16,7 +16,7 @@
     "shipping_address": "서울시 용산구 대사관로 12길 3 발렛부스 안",
     "partner_user_id": "07a50e1d-ae97-4e20-abb8-0a7c4c48b5a8",
     "approved_at": "2026-08-12T10:21:48",
-    "fulfilled": false
+    "fulfilled": true
   },
   {
     "partner_order_id": "1b2ccf84b9414fba866702e968694f9a",
