@@ -249,6 +249,15 @@
   .cart-item-info .p{font-size:13px; font-weight:500;}
   .cart-item-remove{background:none; border:none; color:var(--ink-soft); font-size:12px; cursor:pointer; text-decoration:underline;}
   .cart-empty{padding:60px 0; text-align:center; color:var(--ink-soft); font-size:13px;}
+  .lookup-order{border:1px solid var(--line); padding:16px; margin-bottom:12px; background:var(--white);}
+  .lookup-order .row{display:flex; justify-content:space-between; font-size:12.5px; color:var(--ink-soft); margin-bottom:6px;}
+  .lookup-order .row:last-child{margin-bottom:0;}
+  .lookup-order .items{color:var(--ink); font-size:13px; margin-bottom:8px; line-height:1.6;}
+  .lookup-order .status{
+    display:inline-block; padding:3px 9px; font-size:11px; border-radius:3px;
+    background:var(--ivory-deep); color:var(--gold);
+  }
+  .lookup-order .amt{font-weight:600; color:var(--ink);}
   .cart-foot{padding:24px 28px 30px; border-top:1px solid var(--line);}
   .cart-total-row{display:flex; justify-content:space-between; font-size:14px; margin-bottom:10px;}
   .cart-total-row .amt{font-size:16px; font-weight:600;}
@@ -326,6 +335,7 @@
       <a href="#" class="cat-link" data-cat="bag">BAG</a>
     </nav>
     <div class="header-icons">
+      <button class="icon-btn" id="orderLookupBtn">주문조회</button>
       <button class="icon-btn" id="cartBtn">BAG<span class="cart-count" id="cartCount">0</span></button>
     </div>
   </div>
@@ -398,6 +408,21 @@
   </div>
 </div>
 
+<div class="cart-drawer" id="lookupDrawer">
+  <div class="cart-head">
+    <h3 class="serif">주문조회</h3>
+    <button class="modal-close" id="lookupClose">&times;</button>
+  </div>
+  <div style="padding:24px 28px;">
+    <div class="shipping-form" style="margin-bottom:0;">
+      <input type="text" id="lookupName" placeholder="주문자 성함">
+      <input type="tel" id="lookupPhone" placeholder="연락처 (010-0000-0000)">
+    </div>
+    <button class="btn primary" id="lookupSubmitBtn" style="width:100%; margin-top:4px;">조회하기</button>
+    <div id="lookupResults" style="margin-top:24px;"></div>
+  </div>
+</div>
+
 <div class="overlay" id="overlay">
   <div class="modal" id="modalBody"></div>
 </div>
@@ -447,7 +472,7 @@ const shapes = {
 const products = [
   {
     id: 1, en: 'DRAGON BAG', kr: '드레곤백 (이너백 포함)',
-    price: 48000, shippingFee: 3500,
+    price: 45000, shippingFee: 3500,
     cat: ['bag', 'new'], material: '합성피혁(에코레더)',
 
     desc: '이너백이 함께 구성되어 수납이 편리하고, 촘촘한 위빙 디테일과 꼼꼼한 마감으로 데일리백으로 오래 사용하실 수 있는 퀄리티 좋은 가방입니다.',
@@ -683,6 +708,52 @@ document.getElementById('cartBtn').addEventListener('click', () => { cartDrawer.
 document.getElementById('cartClose').addEventListener('click', closeCart);
 scrim.addEventListener('click', closeCart);
 function closeCart(){ cartDrawer.classList.remove('open'); scrim.classList.remove('open'); }
+
+const lookupDrawer = document.getElementById('lookupDrawer');
+document.getElementById('orderLookupBtn').addEventListener('click', () => { lookupDrawer.classList.add('open'); scrim.classList.add('open'); });
+document.getElementById('lookupClose').addEventListener('click', () => { lookupDrawer.classList.remove('open'); scrim.classList.remove('open'); });
+scrim.addEventListener('click', () => { lookupDrawer.classList.remove('open'); });
+
+document.getElementById('lookupSubmitBtn').addEventListener('click', async () => {
+  const name = document.getElementById('lookupName').value.trim();
+  const phone = document.getElementById('lookupPhone').value.trim();
+  const resultsEl = document.getElementById('lookupResults');
+  if(!name || !phone){ showToast('성함과 연락처를 입력해 주세요'); return; }
+
+  const btn = document.getElementById('lookupSubmitBtn');
+  btn.disabled = true;
+  btn.textContent = '조회 중...';
+  resultsEl.innerHTML = '';
+  try{
+    const res = await fetch('/api/orders/lookup', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({name, phone})
+    });
+    const data = await res.json();
+    btn.disabled = false;
+    btn.textContent = '조회하기';
+    if(!res.ok){
+      resultsEl.innerHTML = `<div class="cart-empty">${data.error || '조회 중 오류가 발생했습니다'}</div>`;
+      return;
+    }
+    if(!data.orders || data.orders.length === 0){
+      resultsEl.innerHTML = '<div class="cart-empty">일치하는 주문 내역이 없습니다</div>';
+      return;
+    }
+    resultsEl.innerHTML = data.orders.map(o => `
+      <div class="lookup-order">
+        <div class="row"><span>${o.date || '-'}</span><span class="status">${o.status}</span></div>
+        <div class="items">${o.items.map(i => `${i.kr}(${i.size}) x${i.qty}`).join(', ')}</div>
+        <div class="row"><span>${o.paymentMethod}</span><span class="amt">${won(o.totalAmount)}</span></div>
+      </div>
+    `).join('');
+  } catch(err){
+    btn.disabled = false;
+    btn.textContent = '조회하기';
+    resultsEl.innerHTML = '<div class="cart-empty">서버에 연결할 수 없습니다</div>';
+  }
+});
 
 let toastTimer;
 function showToast(msg){

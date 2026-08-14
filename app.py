@@ -292,6 +292,52 @@ def bank_transfer_order():
     return jsonify({"orderId": order_id, "totalAmount": total_amount})
 
 
+def _normalize_phone(phone):
+    return "".join(ch for ch in phone if ch.isdigit())
+
+
+@app.route("/api/orders/lookup", methods=["POST"])
+def lookup_orders():
+    data = request.get_json(force=True, silent=True) or {}
+    name = (data.get("name") or "").strip()
+    phone = (data.get("phone") or "").strip()
+
+    if not name or not phone:
+        return jsonify({"error": "성함과 연락처를 모두 입력해 주세요."}), 400
+
+    if not GITHUB_TOKEN:
+        return jsonify({"orders": []})
+
+    try:
+        orders_list, _ = github_get_orders()
+    except Exception:
+        return jsonify({"error": "조회 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."}), 502
+
+    phone_norm = _normalize_phone(phone)
+    matched = [
+        o for o in orders_list
+        if o.get("shipping_name", "") == name
+        and _normalize_phone(o.get("shipping_phone", "")) == phone_norm
+    ]
+    matched.sort(key=lambda o: o.get("approved_at") or "", reverse=True)
+
+    result = [
+        {
+            "orderId": o["partner_order_id"][:8],
+            "date": (o.get("approved_at") or "")[:16].replace("T", " "),
+            "items": [
+                {"kr": i.get("kr"), "size": i.get("size"), "qty": i.get("qty")}
+                for i in o.get("items", [])
+            ],
+            "totalAmount": o.get("total_amount", 0),
+            "paymentMethod": "카카오페이" if o.get("payment_method") == "kakaopay" else "무통장입금",
+            "status": o.get("status") or "결제완료",
+        }
+        for o in matched
+    ]
+    return jsonify({"orders": result})
+
+
 ADMIN_LOGIN_HTML = """
 <!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
 <title>LA SUITE — 관리자</title>
