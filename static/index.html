@@ -271,6 +271,11 @@
     font-family:inherit; font-size:13px; margin-bottom:8px; box-sizing:border-box;
   }
   .shipping-form input:focus{outline:none; border-color:var(--gold);}
+  .same-as-orderer{
+    display:flex; align-items:center; gap:7px; margin-bottom:10px;
+    font-size:12.5px; color:var(--ink-soft); cursor:pointer;
+  }
+  .same-as-orderer input{width:auto; margin:0;}
   .pay-method-row{display:flex; gap:8px; margin-bottom:14px;}
   .pay-method-btn{
     flex:1; padding:11px; border:1px solid var(--line); background:transparent;
@@ -385,9 +390,17 @@
     <div class="cart-total-row grand"><span>총 결제금액</span><span class="amt" id="cartGrandTotal">0원</span></div>
 
     <div class="shipping-form">
-      <div class="option-label">배송 정보</div>
+      <div class="option-label">주문자 정보</div>
+      <input type="text" id="ordererName" placeholder="주문자 성함">
+      <input type="tel" id="ordererPhone" placeholder="주문자 연락처 (010-0000-0000)">
+
+      <div class="option-label" style="margin-top:4px;">받는 분 정보</div>
+      <label class="same-as-orderer">
+        <input type="checkbox" id="sameAsOrderer">
+        <span>주문자와 동일</span>
+      </label>
       <input type="text" id="shipName" placeholder="받는 분 성함">
-      <input type="tel" id="shipPhone" placeholder="연락처 (010-0000-0000)">
+      <input type="tel" id="shipPhone" placeholder="받는 분 연락처 (010-0000-0000)">
       <input type="text" id="shipAddress" placeholder="배송지 주소 (상세주소 포함)">
     </div>
 
@@ -821,9 +834,36 @@ document.querySelectorAll('.pay-method-btn').forEach(b => {
   });
 });
 
+document.getElementById('sameAsOrderer').addEventListener('change', (e) => {
+  const shipNameInput = document.getElementById('shipName');
+  const shipPhoneInput = document.getElementById('shipPhone');
+  if(e.target.checked){
+    shipNameInput.value = document.getElementById('ordererName').value.trim();
+    shipPhoneInput.value = document.getElementById('ordererPhone').value.trim();
+    shipNameInput.disabled = true;
+    shipPhoneInput.disabled = true;
+  } else {
+    shipNameInput.disabled = false;
+    shipPhoneInput.disabled = false;
+    shipNameInput.value = '';
+    shipPhoneInput.value = '';
+  }
+});
+
 async function handleCheckout(){
   if(cart.length === 0){ showToast('장바구니가 비어 있습니다'); return; }
 
+  const ordererName = document.getElementById('ordererName').value.trim();
+  const ordererPhone = document.getElementById('ordererPhone').value.trim();
+  if(!ordererName || !ordererPhone){
+    showToast('주문자 성함과 연락처를 입력해 주세요');
+    return;
+  }
+
+  if(document.getElementById('sameAsOrderer').checked){
+    document.getElementById('shipName').value = ordererName;
+    document.getElementById('shipPhone').value = ordererPhone;
+  }
   const shipName = document.getElementById('shipName').value.trim();
   const shipPhone = document.getElementById('shipPhone').value.trim();
   const shipAddress = document.getElementById('shipAddress').value.trim();
@@ -836,6 +876,7 @@ async function handleCheckout(){
   const originalText = btn.textContent;
   const shippingFee = Math.max(...cart.map(i => i.shippingFee || 0));
   const items = cart.map(i => ({kr: i.kr, price: i.price, qty: i.qty, size: i.size}));
+  const orderer = {name: ordererName, phone: ordererPhone};
   const shipping = {name: shipName, phone: shipPhone, address: shipAddress};
 
   if(payMethod === 'bank'){
@@ -847,7 +888,7 @@ async function handleCheckout(){
       const res = await fetch('/api/orders/bank-transfer', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({items, shippingFee, shipping, depositorName, partnerUserId: getPartnerUserId()})
+        body: JSON.stringify({items, shippingFee, orderer, shipping, depositorName, partnerUserId: getPartnerUserId()})
       });
       const data = await res.json();
       if(!res.ok){
@@ -869,7 +910,7 @@ async function handleCheckout(){
     const res = await fetch('/api/payment/ready', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({items, shippingFee, shipping, partnerUserId: getPartnerUserId()})
+      body: JSON.stringify({items, shippingFee, orderer, shipping, partnerUserId: getPartnerUserId()})
     });
     const data = await res.json();
     if(!res.ok){

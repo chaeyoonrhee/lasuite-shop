@@ -96,6 +96,7 @@ def notify_telegram(order_record):
             f'상품: {items_text}',
             f'금액: {order_record["total_amount"]:,}원',
             f'결제수단: {method}',
+            f'주문자: {order_record.get("orderer_name", "-")} / {order_record.get("orderer_phone", "-")}',
             f'받는분: {order_record.get("shipping_name", "-")} / {order_record.get("shipping_phone", "-")}',
             f'주소: {order_record.get("shipping_address", "-")}',
         ]
@@ -124,6 +125,9 @@ def payment_ready():
     data = request.get_json(force=True, silent=True) or {}
     items = data.get("items") or []
     partner_user_id = data.get("partnerUserId") or "guest"
+    orderer = data.get("orderer") or {}
+    orderer_name = (orderer.get("name") or "").strip()
+    orderer_phone = (orderer.get("phone") or "").strip()
     shipping = data.get("shipping") or {}
     shipping_name = (shipping.get("name") or "").strip()
     shipping_phone = (shipping.get("phone") or "").strip()
@@ -131,6 +135,9 @@ def payment_ready():
 
     if not items:
         return jsonify({"error": "장바구니가 비어 있습니다."}), 400
+
+    if not orderer_name or not orderer_phone:
+        return jsonify({"error": "주문자 성함과 연락처를 입력해 주세요."}), 400
 
     if not shipping_name or not shipping_phone or not shipping_address:
         return jsonify({"error": "받는 분 성함, 연락처, 배송지 주소를 모두 입력해 주세요."}), 400
@@ -175,6 +182,8 @@ def payment_ready():
         "items": items,
         "total_amount": total_amount,
         "shipping_fee": shipping_fee,
+        "orderer_name": orderer_name,
+        "orderer_phone": orderer_phone,
         "shipping_name": shipping_name,
         "shipping_phone": shipping_phone,
         "shipping_address": shipping_address,
@@ -223,6 +232,8 @@ def payment_approve():
         "items": order["items"],
         "total_amount": order["total_amount"],
         "shipping_fee": order.get("shipping_fee", 0),
+        "orderer_name": order.get("orderer_name", ""),
+        "orderer_phone": order.get("orderer_phone", ""),
         "shipping_name": order.get("shipping_name", ""),
         "shipping_phone": order.get("shipping_phone", ""),
         "shipping_address": order.get("shipping_address", ""),
@@ -249,6 +260,9 @@ def bank_transfer_order():
     data = request.get_json(force=True, silent=True) or {}
     items = data.get("items") or []
     partner_user_id = data.get("partnerUserId") or "guest"
+    orderer = data.get("orderer") or {}
+    orderer_name = (orderer.get("name") or "").strip()
+    orderer_phone = (orderer.get("phone") or "").strip()
     shipping = data.get("shipping") or {}
     shipping_name = (shipping.get("name") or "").strip()
     shipping_phone = (shipping.get("phone") or "").strip()
@@ -257,6 +271,8 @@ def bank_transfer_order():
 
     if not items:
         return jsonify({"error": "장바구니가 비어 있습니다."}), 400
+    if not orderer_name or not orderer_phone:
+        return jsonify({"error": "주문자 성함과 연락처를 입력해 주세요."}), 400
     if not shipping_name or not shipping_phone or not shipping_address:
         return jsonify({"error": "받는 분 성함, 연락처, 배송지 주소를 모두 입력해 주세요."}), 400
     if not depositor_name:
@@ -277,6 +293,8 @@ def bank_transfer_order():
         "items": items,
         "total_amount": total_amount,
         "shipping_fee": shipping_fee,
+        "orderer_name": orderer_name,
+        "orderer_phone": orderer_phone,
         "shipping_name": shipping_name,
         "shipping_phone": shipping_phone,
         "shipping_address": shipping_address,
@@ -316,8 +334,8 @@ def lookup_orders():
     phone_norm = _normalize_phone(phone)
     matched = [
         o for o in orders_list
-        if o.get("shipping_name", "") == name
-        and _normalize_phone(o.get("shipping_phone", "")) == phone_norm
+        if (o.get("orderer_name") or o.get("shipping_name", "")) == name
+        and _normalize_phone(o.get("orderer_phone") or o.get("shipping_phone", "")) == phone_norm
     ]
     matched.sort(key=lambda o: o.get("approved_at") or "", reverse=True)
 
@@ -391,12 +409,13 @@ ADMIN_ORDERS_HTML = """
     {% if orders %}
       <div class="summary">총 {{ orders|length }}건 · 합계 {{ '{:,}'.format(total) }}원</div>
       <table>
-        <tr><th>주문시각</th><th>주문번호</th><th>상품</th><th>받는분</th><th>연락처</th><th>배송지</th><th>결제수단</th><th>상태</th><th>금액</th></tr>
+        <tr><th>주문시각</th><th>주문번호</th><th>상품</th><th>주문자</th><th>받는분</th><th>연락처</th><th>배송지</th><th>결제수단</th><th>상태</th><th>금액</th><th>처리</th></tr>
         {% for o in orders %}
-        <tr>
+        <tr{% if o.fulfilled %} style="opacity:0.55;"{% endif %}>
           <td>{{ o.approved_at or '-' }}</td>
           <td>{{ o.partner_order_id[:8] }}</td>
           <td>{% for it in o['items'] %}{{ it.kr }}({{ it.size }}) x{{ it.qty }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+          <td>{{ o.orderer_name or o.shipping_name or '-' }}<br><span style="color:#6b6459;font-size:11px;">{{ o.orderer_phone or o.shipping_phone or '-' }}</span></td>
           <td>{{ o.shipping_name or '-' }}</td>
           <td>{{ o.shipping_phone or '-' }}</td>
           <td>{{ o.shipping_address or '-' }}</td>
@@ -412,6 +431,11 @@ ADMIN_ORDERS_HTML = """
             {% endif %}
           </td>
           <td class="amt">{{ '{:,}'.format(o.total_amount) }}원{% if o.shipping_fee %}<br><span style="font-weight:400;color:#6b6459;font-size:11px;">(배송비 {{ '{:,}'.format(o.shipping_fee) }}원 포함)</span>{% endif %}</td>
+          <td>
+            <form method="post" action="/admin/orders/{{ o.partner_order_id }}/fulfill">
+              <button type="submit" class="confirm-btn" style="{% if o.fulfilled %}background:#5c8a52;{% endif %}">{{ '처리완료 ✓' if o.fulfilled else '처리완료로 표시' }}</button>
+            </form>
+          </td>
         </tr>
         {% endfor %}
       </table>
@@ -459,6 +483,23 @@ def admin_confirm_order(order_id):
                     o["status"] = "입금확인"
                     break
             github_save_orders(orders_list, sha, f"Confirm deposit {order_id}")
+        except Exception:
+            pass
+    return redirect("/admin/orders")
+
+
+@app.route("/admin/orders/<order_id>/fulfill", methods=["POST"])
+def admin_fulfill_order(order_id):
+    if not session.get("is_admin"):
+        return redirect("/admin")
+    if GITHUB_TOKEN:
+        try:
+            orders_list, sha = github_get_orders()
+            for o in orders_list:
+                if o.get("partner_order_id") == order_id:
+                    o["fulfilled"] = not o.get("fulfilled", False)
+                    break
+            github_save_orders(orders_list, sha, f"Toggle fulfilled {order_id}")
         except Exception:
             pass
     return redirect("/admin/orders")
