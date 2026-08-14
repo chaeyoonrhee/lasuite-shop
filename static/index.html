@@ -262,6 +262,22 @@
     font-family:inherit; font-size:13px; margin-bottom:8px; box-sizing:border-box;
   }
   .shipping-form input:focus{outline:none; border-color:var(--gold);}
+  .pay-method-row{display:flex; gap:8px; margin-bottom:14px;}
+  .pay-method-btn{
+    flex:1; padding:11px; border:1px solid var(--line); background:transparent;
+    font-family:inherit; font-size:12.5px; cursor:pointer; color:var(--ink-soft); transition:.2s;
+  }
+  .pay-method-btn.selected{background:var(--ink); border-color:var(--ink); color:var(--ivory);}
+  .bank-info{
+    background:var(--ivory-deep); border:1px solid var(--line); padding:14px;
+    margin-bottom:16px; font-size:12.5px; color:var(--ink-soft); line-height:1.7;
+  }
+  .bank-info p{margin-bottom:10px; color:var(--ink); font-weight:500;}
+  .bank-info input{
+    width:100%; padding:11px 12px; border:1px solid var(--line); background:var(--white);
+    font-family:inherit; font-size:13px; box-sizing:border-box;
+  }
+  .bank-info input:focus{outline:none; border-color:var(--gold);}
   .pay-note{margin-top:10px; font-size:11px; color:var(--ink-soft); text-align:center; display:flex; align-items:center; justify-content:center; gap:6px;}
   .pay-note .dot{width:8px; height:8px; border-radius:50%; background:#FEE500; display:inline-block;}
   .scrim{position:fixed; inset:0; background:rgba(43,38,32,0.4); z-index:290; display:none;}
@@ -363,8 +379,19 @@
       <input type="text" id="shipAddress" placeholder="배송지 주소 (상세주소 포함)">
     </div>
 
+    <div class="option-label">결제 수단</div>
+    <div class="pay-method-row" id="payMethodRow">
+      <button type="button" class="pay-method-btn selected" data-method="kakao">카카오페이</button>
+      <button type="button" class="pay-method-btn" data-method="bank">무통장입금</button>
+    </div>
+
+    <div class="bank-info" id="bankInfo" style="display:none;">
+      <p>국민은행 295401-01-249911<br>예금주 이채윤(라스윗)</p>
+      <input type="text" id="depositorName" placeholder="입금자명 (실제 입금하실 분 성함)">
+    </div>
+
     <button class="btn primary" id="checkoutBtn" style="width:100%">카카오페이로 결제하기</button>
-    <div class="pay-note"><span class="dot"></span>카카오페이 간편결제로 안전하게 결제됩니다</div>
+    <div class="pay-note" id="payNote"><span class="dot"></span>카카오페이 간편결제로 안전하게 결제됩니다</div>
   </div>
 </div>
 
@@ -417,7 +444,7 @@ const shapes = {
 const products = [
   {
     id: 1, en: 'DRAGON BAG', kr: '드레곤백 (이너백 포함)',
-    price: 50000, shippingFee: 3500,
+    price: 48000, shippingFee: 3500,
     cat: ['bag', 'new'], material: '합성피혁(에코레더)',
 
     desc: '이너백이 함께 구성되어 수납이 편리하고, 촘촘한 위빙 디테일과 꼼꼼한 마감으로 데일리백으로 오래 사용하실 수 있는 퀄리티 좋은 가방입니다.',
@@ -684,6 +711,28 @@ function getPartnerUserId(){
   return id;
 }
 
+let payMethod = 'kakao';
+
+document.querySelectorAll('.pay-method-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.pay-method-btn').forEach(x => x.classList.remove('selected'));
+    b.classList.add('selected');
+    payMethod = b.dataset.method;
+    const bankInfo = document.getElementById('bankInfo');
+    const checkoutBtn = document.getElementById('checkoutBtn');
+    const payNote = document.getElementById('payNote');
+    if(payMethod === 'bank'){
+      bankInfo.style.display = 'block';
+      checkoutBtn.textContent = '무통장입금 주문하기';
+      payNote.innerHTML = '주문 후 입금 확인되면 배송이 시작됩니다';
+    } else {
+      bankInfo.style.display = 'none';
+      checkoutBtn.textContent = '카카오페이로 결제하기';
+      payNote.innerHTML = '<span class="dot"></span>카카오페이 간편결제로 안전하게 결제됩니다';
+    }
+  });
+});
+
 async function handleCheckout(){
   if(cart.length === 0){ showToast('장바구니가 비어 있습니다'); return; }
 
@@ -697,19 +746,42 @@ async function handleCheckout(){
 
   const btn = document.getElementById('checkoutBtn');
   const originalText = btn.textContent;
+  const shippingFee = Math.max(...cart.map(i => i.shippingFee || 0));
+  const items = cart.map(i => ({kr: i.kr, price: i.price, qty: i.qty, size: i.size}));
+  const shipping = {name: shipName, phone: shipPhone, address: shipAddress};
+
+  if(payMethod === 'bank'){
+    const depositorName = document.getElementById('depositorName').value.trim();
+    if(!depositorName){ showToast('입금자명을 입력해 주세요'); return; }
+    btn.disabled = true;
+    btn.textContent = '주문 접수 중...';
+    try{
+      const res = await fetch('/api/orders/bank-transfer', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({items, shippingFee, shipping, depositorName, partnerUserId: getPartnerUserId()})
+      });
+      const data = await res.json();
+      if(!res.ok){
+        showToast(data.error || '주문 접수 중 오류가 발생했습니다');
+        btn.disabled = false; btn.textContent = originalText;
+        return;
+      }
+      window.location.href = `/payment-result.html?status=bank&order=${data.orderId}&amount=${data.totalAmount}`;
+    } catch(err){
+      showToast('서버에 연결할 수 없습니다');
+      btn.disabled = false; btn.textContent = originalText;
+    }
+    return;
+  }
+
   btn.disabled = true;
   btn.textContent = '카카오페이 연결 중...';
   try{
-    const shippingFee = Math.max(...cart.map(i => i.shippingFee || 0));
     const res = await fetch('/api/payment/ready', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        items: cart.map(i => ({kr: i.kr, price: i.price, qty: i.qty, size: i.size})),
-        shippingFee,
-        shipping: {name: shipName, phone: shipPhone, address: shipAddress},
-        partnerUserId: getPartnerUserId()
-      })
+      body: JSON.stringify({items, shippingFee, shipping, partnerUserId: getPartnerUserId()})
     });
     const data = await res.json();
     if(!res.ok){

@@ -2,6 +2,7 @@ import base64
 import json
 import os
 import uuid
+from datetime import datetime
 
 import requests
 from dotenv import load_dotenv
@@ -23,6 +24,9 @@ GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
 GITHUB_REPO = os.environ.get("GITHUB_REPO", "chaeyoonrhee/lasuite-shop")
 GITHUB_ORDERS_PATH = os.environ.get("GITHUB_ORDERS_PATH", "orders/orders.json")
 GITHUB_API = "https://api.github.com"
+
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
 # 결제 준비(ready)~승인(approve) 사이 tid를 보관하기 위한 임시 저장소.
 # 카카오 정책상 결제 준비 후 15분 내 승인되지 않으면 자동 만료된다.
@@ -74,6 +78,35 @@ def record_order(order_record):
         orders_list, sha = github_get_orders()
         orders_list.append(order_record)
         github_save_orders(orders_list, sha, f"Order {order_record['partner_order_id']}")
+    except Exception:
+        pass
+
+
+def notify_telegram(order_record):
+    """새 주문 알림을 텔레그램으로 보낸다. 실패해도 주문 흐름은 막지 않는다."""
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        return
+    try:
+        items_text = ", ".join(
+            f'{i["kr"]}({i.get("size", "-")}) x{i["qty"]}' for i in order_record["items"]
+        )
+        method = "카카오페이 결제완료" if order_record.get("payment_method") == "kakaopay" else "무통장입금 (입금대기)"
+        lines = [
+            "🛍 라스윗 새 주문",
+            f'상품: {items_text}',
+            f'금액: {order_record["total_amount"]:,}원',
+            f'결제수단: {method}',
+            f'받는분: {order_record.get("shipping_name", "-")} / {order_record.get("shipping_phone", "-")}',
+            f'주소: {order_record.get("shipping_address", "-")}',
+        ]
+        if order_record.get("depositor_name"):
+            lines.append(f'입금자명: {order_record["depositor_name"]}')
+        text = "\n".join(lines)
+        requests.post(
+            f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
+            json={"chat_id": TELEGRAM_CHAT_ID, "text": text},
+            timeout=10,
+        )
     except Exception:
         pass
 
@@ -185,7 +218,7 @@ def payment_approve():
 
     order["status"] = "APPROVED"
     order["approved_at"] = result.get("approved_at")
-    record_order({
+    order_record = {
         "partner_order_id": partner_order_id,
         "items": order["items"],
         "total_amount": order["total_amount"],
@@ -194,8 +227,12 @@ def payment_approve():
         "shipping_phone": order.get("shipping_phone", ""),
         "shipping_address": order.get("shipping_address", ""),
         "partner_user_id": order["partner_user_id"],
+        "payment_method": "kakaopay",
+        "status": "결제완료",
         "approved_at": order["approved_at"],
-    })
+    }
+    record_order(order_record)
+    notify_telegram(order_record)
     return redirect(f"/payment-result.html?status=success&order={partner_order_id}&amount={order['total_amount']}")
 
 
@@ -205,6 +242,54 @@ def get_order(order_id):
     if not order:
         return jsonify({"error": "not found"}), 404
     return jsonify(order)
+
+
+@app.route("/api/orders/bank-transfer", methods=["POST"])
+def bank_transfer_order():
+    data = request.get_json(force=True, silent=True) or {}
+    items = data.get("items") or []
+    partner_user_id = data.get("partnerUserId") or "guest"
+    shipping = data.get("shipping") or {}
+    shipping_name = (shipping.get("name") or "").strip()
+    shipping_phone = (shipping.get("phone") or "").strip()
+    shipping_address = (shipping.get("address") or "").strip()
+    depositor_name = (data.get("depositorName") or "").strip()
+
+    if not items:
+        return jsonify({"error": "장바구니가 비어 있습니다."}), 400
+    if not shipping_name or not shipping_phone or not shipping_address:
+        return jsonify({"error": "받는 분 성함, 연락처, 배송지 주소를 모두 입력해 주세요."}), 400
+    if not depositor_name:
+        return jsonify({"error": "입금자명을 입력해 주세요."}), 400
+
+    try:
+        shipping_fee = int(data.get("shippingFee") or 0)
+        total_amount = sum(int(i["price"]) * int(i["qty"]) for i in items) + shipping_fee
+    except (KeyError, TypeError, ValueError):
+        return jsonify({"error": "장바구니 항목 형식이 올바르지 않습니다."}), 400
+
+    if total_amount <= 0:
+        return jsonify({"error": "결제 금액이 올바르지 않습니다."}), 400
+
+    order_id = uuid.uuid4().hex
+    order_record = {
+        "partner_order_id": order_id,
+        "items": items,
+        "total_amount": total_amount,
+        "shipping_fee": shipping_fee,
+        "shipping_name": shipping_name,
+        "shipping_phone": shipping_phone,
+        "shipping_address": shipping_address,
+        "partner_user_id": partner_user_id,
+        "payment_method": "bank_transfer",
+        "depositor_name": depositor_name,
+        "status": "입금대기",
+        "approved_at": datetime.utcnow().isoformat(timespec="seconds"),
+    }
+    record_order(order_record)
+    notify_telegram(order_record)
+
+    return jsonify({"orderId": order_id, "totalAmount": total_amount})
 
 
 ADMIN_LOGIN_HTML = """
@@ -247,6 +332,10 @@ ADMIN_ORDERS_HTML = """
   .amt{font-weight:600;}
   .empty{padding:80px 20px;text-align:center;color:#6b6459;font-size:14px;background:#fff;border:1px solid #e2dbcd;}
   .summary{font-size:13px;color:#6b6459;margin-bottom:14px;}
+  .tag{display:inline-block;padding:3px 8px;font-size:11px;border-radius:3px;}
+  .tag.paid{background:#eef3ea;color:#5c8a52;}
+  .tag.pending{background:#f5eee0;color:#a9895f;}
+  .confirm-btn{margin-top:6px;padding:5px 10px;font-size:11px;background:#2b2620;color:#f7f4ef;border:none;cursor:pointer;}
 </style></head><body>
   <div class="wrap">
     <div class="head">
@@ -256,7 +345,7 @@ ADMIN_ORDERS_HTML = """
     {% if orders %}
       <div class="summary">총 {{ orders|length }}건 · 합계 {{ '{:,}'.format(total) }}원</div>
       <table>
-        <tr><th>주문시각</th><th>주문번호</th><th>상품</th><th>받는분</th><th>연락처</th><th>배송지</th><th>금액</th></tr>
+        <tr><th>주문시각</th><th>주문번호</th><th>상품</th><th>받는분</th><th>연락처</th><th>배송지</th><th>결제수단</th><th>상태</th><th>금액</th></tr>
         {% for o in orders %}
         <tr>
           <td>{{ o.approved_at or '-' }}</td>
@@ -265,6 +354,17 @@ ADMIN_ORDERS_HTML = """
           <td>{{ o.shipping_name or '-' }}</td>
           <td>{{ o.shipping_phone or '-' }}</td>
           <td>{{ o.shipping_address or '-' }}</td>
+          <td>{{ '카카오페이' if o.payment_method == 'kakaopay' else '무통장입금' }}{% if o.depositor_name %}<br><span style="color:#6b6459;font-size:11px;">입금자 {{ o.depositor_name }}</span>{% endif %}</td>
+          <td>
+            {% if o.status == '입금대기' %}
+              <span class="tag pending">입금대기</span>
+              <form method="post" action="/admin/orders/{{ o.partner_order_id }}/confirm">
+                <button type="submit" class="confirm-btn">입금확인</button>
+              </form>
+            {% else %}
+              <span class="tag paid">{{ o.status or '결제완료' }}</span>
+            {% endif %}
+          </td>
           <td class="amt">{{ '{:,}'.format(o.total_amount) }}원{% if o.shipping_fee %}<br><span style="font-weight:400;color:#6b6459;font-size:11px;">(배송비 {{ '{:,}'.format(o.shipping_fee) }}원 포함)</span>{% endif %}</td>
         </tr>
         {% endfor %}
@@ -299,6 +399,23 @@ def admin_orders():
     orders_list = sorted(orders_list, key=lambda o: o.get("approved_at") or "", reverse=True)
     total = sum(o.get("total_amount", 0) for o in orders_list)
     return render_template_string(ADMIN_ORDERS_HTML, orders=orders_list, total=total)
+
+
+@app.route("/admin/orders/<order_id>/confirm", methods=["POST"])
+def admin_confirm_order(order_id):
+    if not session.get("is_admin"):
+        return redirect("/admin")
+    if GITHUB_TOKEN:
+        try:
+            orders_list, sha = github_get_orders()
+            for o in orders_list:
+                if o.get("partner_order_id") == order_id:
+                    o["status"] = "입금확인"
+                    break
+            github_save_orders(orders_list, sha, f"Confirm deposit {order_id}")
+        except Exception:
+            pass
+    return redirect("/admin/orders")
 
 
 @app.route("/admin/logout")
