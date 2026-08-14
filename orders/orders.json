@@ -16,5 +16,26 @@
     "shipping_address": "서울시 용산구 대사관로 12길 3 발렛부스 안",
     "partner_user_id": "07a50e1d-ae97-4e20-abb8-0a7c4c48b5a8",
     "approved_at": "2026-08-12T10:21:48"
+  },
+  {
+    "partner_order_id": "1b2ccf84b9414fba866702e968694f9a",
+    "items": [
+      {
+        "kr": "드레곤백 (이너백 포함)",
+        "price": 45000,
+        "qty": 1,
+        "size": "아이보리"
+      }
+    ],
+    "total_amount": 48500,
+    "shipping_fee": 3500,
+    "shipping_name": "정원희",
+    "shipping_phone": "01087297006",
+    "shipping_address": "서울시 성북구 숭인로2길 61",
+    "partner_user_id": "15f5d2d2-cb60-4719-a7c3-eb35566c22d5",
+    "payment_method": "bank_transfer",
+    "depositor_name": "정원희",
+    "status": "입금대기",
+    "approved_at": "2026-08-14T05:09:13"
   }
 ]
