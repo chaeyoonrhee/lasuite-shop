@@ -35,7 +35,7 @@
     "partner_user_id": "15f5d2d2-cb60-4719-a7c3-eb35566c22d5",
     "payment_method": "bank_transfer",
     "depositor_name": "정원희",
-    "status": "입금대기",
+    "status": "입금확인",
     "approved_at": "2026-08-14T05:09:13"
   }
 ]
