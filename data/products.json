@@ -74,29 +74,5 @@
       }
     ],
     "innerBagImage": "images/dragon-bag/innerbag_1.jpg"
-  },
-  {
-    "id": 999,
-    "en": "TEST ITEM",
-    "kr": "테스트상품",
-    "price": 1000,
-    "shippingFee": 0,
-    "cat": [
-      "acc"
-    ],
-    "material": "test",
-    "desc": "test",
-    "sizeGuide": "test",
-    "notices": [],
-    "orderNotice": "test",
-    "returnNotice": "test",
-    "colors": [
-      {
-        "key": "x",
-        "label": "테스트",
-        "hex": "#000000",
-        "images": []
-      }
-    ]
   }
 ]
