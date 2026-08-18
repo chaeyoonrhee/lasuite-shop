@@ -1,0 +1,12 @@
+name: Keep LA SUITE awake
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping site to prevent Render free-tier sleep
+        run: curl -sS -o /dev/null -w "status: %{http_code}\n" https://lasuiteseoul.kr/ || true
