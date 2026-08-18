@@ -616,7 +616,7 @@ function openModal(p){
     const colorLabel = document.getElementById('colorLabel');
 
     function renderThumbs(){
-      const imgs = p.colors[selectedColorIdx].images;
+      const imgs = p.colors[selectedColorIdx].images.concat(p.groupImages || []);
       thumbRow.innerHTML = imgs.map((src,i) => `<img class="thumb ${i===selectedImageIdx?'selected':''}" data-idx="${i}" src="${src}">`).join('');
       thumbRow.querySelectorAll('.thumb').forEach(t => {
         t.addEventListener('click', () => {
