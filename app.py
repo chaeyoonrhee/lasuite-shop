@@ -82,6 +82,18 @@ def record_order(order_record):
         pass
 
 
+def github_get_json_file(path, default):
+    """GitHub 저장소의 JSON 파일을 실시간으로 읽어온다. 배포와 무관하게 항상 최신 내용을 반환한다."""
+    url = f"{GITHUB_API}/repos/{GITHUB_REPO}/contents/{path}"
+    r = requests.get(url, headers=github_headers(), timeout=10)
+    if r.status_code == 404:
+        return default, None
+    r.raise_for_status()
+    data = r.json()
+    content = base64.b64decode(data["content"]).decode("utf-8")
+    return json.loads(content), data["sha"]
+
+
 def notify_telegram(order_record):
     """새 주문 알림을 텔레그램으로 보낸다. 실패해도 주문 흐름은 막지 않는다."""
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
@@ -115,6 +127,22 @@ def notify_telegram(order_record):
 @app.route("/")
 def index():
     return send_from_directory(app.static_folder, "index.html")
+
+
+GITHUB_PRODUCTS_PATH = os.environ.get("GITHUB_PRODUCTS_PATH", "data/products.json")
+
+
+@app.route("/api/products")
+def api_products():
+    """상품 목록을 GitHub 저장소에서 실시간으로 읽어온다.
+    products.json만 GitHub에서 수정하면 재배포 없이 바로 사이트에 반영된다."""
+    if not GITHUB_TOKEN:
+        return jsonify([])
+    try:
+        products, _ = github_get_json_file(GITHUB_PRODUCTS_PATH, [])
+    except Exception:
+        products = []
+    return jsonify([p for p in products if not p.get("hidden")])
 
 
 @app.route("/api/payment/ready", methods=["POST"])
