@@ -6,8 +6,7 @@
     "price": 45000,
     "shippingFee": 3500,
     "cat": [
-      "bag",
-      "new"
+      "bag"
     ],
     "material": "합성피혁(에코레더)",
     "desc": "이너백이 함께 구성되어 수납이 편리하고, 촘촘한 위빙 디테일과 꼼꼼한 마감으로 데일리백으로 오래 사용하실 수 있는 퀄리티 좋은 가방입니다.",
@@ -128,7 +127,8 @@
         ]
       }
     ],
-    "innerBagImage": "images/dragon-bag/innerbag_1.jpg"
+    "innerBagImage": "images/dragon-bag/innerbag_1.jpg",
+    "createdAt": "2026-08-14"
   },
   {
     "id": 2,
@@ -137,8 +137,7 @@
     "price": 31000,
     "shippingFee": 3500,
     "cat": [
-      "bottom",
-      "new"
+      "bottom"
     ],
     "material": "폴리에스테르 혼방 스판 소재로, 표면은 매끈하면서도 쫀득한 탄력이 느껴지는 촉감 좋은 원단입니다.",
     "desc": "매끈한 표면에 쫀득한 탄력이 살아있는 스판 소재로, 촉감이 정말 좋은 플레어 팬츠입니다. 허리 절개 밴딩과 스트링으로 편안하게 사이즈 조절이 가능하고, 매끈하게 떨어지는 플레어 밑단이 다리 라인을 자연스럽게 정리해 줍니다. 데일리룩 어디에나 폭넓게 매치하기 좋은 베이직 컬러 구성입니다.",
@@ -217,7 +216,8 @@
       "images/pinter-flare-pants/group_5.jpg",
       "images/pinter-flare-pants/group_6.jpg",
       "images/pinter-flare-pants/group_7.jpg"
-    ]
+    ],
+    "createdAt": "2026-08-18"
   },
   {
     "id": 3,
@@ -226,8 +226,7 @@
     "price": 25000,
     "shippingFee": 3500,
     "cat": [
-      "outer",
-      "new"
+      "outer"
     ],
     "material": "비스코스 폴리 혼방",
     "desc": "은은하게 비치는 립 니트 텍스처와 깔끔한 라운드넥이 돋보이는 가디건입니다. 부드러운 비스코스 폴리 혼방 소재로 가볍게 걸치기 좋고, 이너로도 가디건으로도 두루 활용할 수 있는 데일리 아이템입니다.",
@@ -331,6 +330,7 @@
           "images/round-cardigan/mint_3.jpg"
         ]
       }
-    ]
+    ],
+    "createdAt": "2026-08-18"
   }
 ]
