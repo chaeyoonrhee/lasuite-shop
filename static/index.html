@@ -444,6 +444,7 @@
 
 <script>
 const won = n => n.toLocaleString('ko-KR') + '원';
+const isNew = p => p.createdAt && (Date.now() - new Date(p.createdAt).getTime()) < 3*24*60*60*1000;
 
 const shapes = {
   dress: `<svg viewBox="0 0 200 260" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -516,7 +517,7 @@ function renderGrid(){
     const thumb = p.colors ? p.colors[0].images[0] : null;
     card.innerHTML = `
       <div class="product-media" style="background:${thumb ? '#fff' : p.tone+'22'};color:${p.soldout ? '#c2bcae' : '#3a332a'}">
-        ${p.cat.includes('new') && !p.soldout ? '<span class="badge">NEW</span>' : ''}
+        ${isNew(p) && !p.soldout ? '<span class="badge">NEW</span>' : ''}
         ${p.sale ? '<span class="badge sale">SALE</span>' : ''}
         ${p.soldout ? '<span class="badge soldout">SOLD OUT</span>' : ''}
         ${thumb ? `<img src="${thumb}" alt="${p.kr}" style="width:100%;height:100%;object-fit:cover;">` : shapes[p.shape]}
