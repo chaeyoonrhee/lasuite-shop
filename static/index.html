@@ -341,7 +341,7 @@
     </nav>
     <div class="header-icons">
       <button class="icon-btn" id="orderLookupBtn">주문조회</button>
-      <button class="icon-btn" id="cartBtn">BAG<span class="cart-count" id="cartCount">0</span></button>
+      <button class="icon-btn" id="cartBtn">CART<span class="cart-count" id="cartCount">0</span></button>
     </div>
   </div>
 </header>
@@ -380,7 +380,7 @@
 
 <div class="cart-drawer" id="cartDrawer">
   <div class="cart-head">
-    <h3 class="serif">SHOPPING BAG</h3>
+    <h3 class="serif">SHOPPING CART</h3>
     <button class="modal-close" id="cartClose">&times;</button>
   </div>
   <div class="cart-items" id="cartItems"></div>
@@ -746,6 +746,7 @@ document.getElementById('lookupSubmitBtn').addEventListener('click', async () =>
         <div class="row"><span>${o.date || '-'}</span><span class="status">${o.status}</span></div>
         <div class="items">${o.items.map(i => `${i.kr}(${i.size}) x${i.qty}`).join(', ')}</div>
         <div class="row"><span>${o.paymentMethod}</span><span class="amt">${won(o.totalAmount)}</span></div>
+        ${o.trackingNumber ? `<div class="row" style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);"><span>${o.courier}</span><span style="color:var(--ink);font-weight:500;">${o.trackingNumber}</span></div>` : ''}
       </div>
     `).join('');
   } catch(err){
