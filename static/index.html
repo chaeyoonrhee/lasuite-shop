@@ -235,11 +235,15 @@
     position:fixed; top:0; right:-420px; width:400px; height:100%;
     background:var(--ivory); box-shadow:-10px 0 40px rgba(0,0,0,0.15);
     z-index:300; transition:right .35s ease; display:flex; flex-direction:column;
+    overflow-y:auto;
   }
   .cart-drawer.open{right:0;}
-  .cart-head{display:flex; justify-content:space-between; align-items:center; padding:26px 28px; border-bottom:1px solid var(--line);}
+  .cart-head{
+    display:flex; justify-content:space-between; align-items:center; padding:26px 28px; border-bottom:1px solid var(--line);
+    position:sticky; top:0; z-index:2; background:var(--ivory); flex-shrink:0;
+  }
   .cart-head h3{font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:500;}
-  .cart-items{flex:1; overflow:auto; padding:10px 28px;}
+  .cart-items{padding:10px 28px;}
   .cart-item{display:flex; gap:14px; padding:18px 0; border-bottom:1px solid var(--line);}
   .cart-item .mini-media{width:64px; height:80px; background:var(--white); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
   .cart-item .mini-media svg{width:70%; height:70%;}
