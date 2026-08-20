@@ -378,6 +378,8 @@ def lookup_orders():
             "totalAmount": o.get("total_amount", 0),
             "paymentMethod": "카카오페이" if o.get("payment_method") == "kakaopay" else "무통장입금",
             "status": o.get("status") or "결제완료",
+            "courier": "GS25 편의점택배" if o.get("tracking_number") else None,
+            "trackingNumber": o.get("tracking_number") or None,
         }
         for o in matched
     ]
@@ -428,6 +430,9 @@ ADMIN_ORDERS_HTML = """
   .tag.paid{background:#eef3ea;color:#5c8a52;}
   .tag.pending{background:#f5eee0;color:#a9895f;}
   .confirm-btn{margin-top:6px;padding:5px 10px;font-size:11px;background:#2b2620;color:#f7f4ef;border:none;cursor:pointer;}
+  .tracking-form{display:flex;gap:4px;margin-top:4px;}
+  .tracking-form input{width:110px;padding:5px 6px;font-size:11px;border:1px solid #e2dbcd;font-family:inherit;}
+  .tracking-form button{padding:5px 8px;font-size:11px;background:#2b2620;color:#f7f4ef;border:none;cursor:pointer;}
 </style></head><body>
   <div class="wrap">
     <div class="head">
@@ -437,7 +442,7 @@ ADMIN_ORDERS_HTML = """
     {% if orders %}
       <div class="summary">총 {{ orders|length }}건 · 합계 {{ '{:,}'.format(total) }}원</div>
       <table>
-        <tr><th>주문시각</th><th>주문번호</th><th>상품</th><th>주문자</th><th>받는분</th><th>연락처</th><th>배송지</th><th>결제수단</th><th>상태</th><th>금액</th><th>처리</th></tr>
+        <tr><th>주문시각</th><th>주문번호</th><th>상품</th><th>주문자</th><th>받는분</th><th>연락처</th><th>배송지</th><th>결제수단</th><th>상태</th><th>운송장번호(GS25)</th><th>금액</th><th>처리</th></tr>
         {% for o in orders %}
         <tr{% if o.fulfilled %} style="opacity:0.55;"{% endif %}>
           <td>{{ o.approved_at or '-' }}</td>
@@ -457,6 +462,12 @@ ADMIN_ORDERS_HTML = """
             {% else %}
               <span class="tag paid">{{ o.status or '결제완료' }}</span>
             {% endif %}
+          </td>
+          <td>
+            <form method="post" action="/admin/orders/{{ o.partner_order_id }}/tracking" class="tracking-form">
+              <input type="text" name="tracking_number" placeholder="운송장번호" value="{{ o.tracking_number or '' }}">
+              <button type="submit">저장</button>
+            </form>
           </td>
           <td class="amt">{{ '{:,}'.format(o.total_amount) }}원{% if o.shipping_fee %}<br><span style="font-weight:400;color:#6b6459;font-size:11px;">(배송비 {{ '{:,}'.format(o.shipping_fee) }}원 포함)</span>{% endif %}</td>
           <td>
@@ -528,6 +539,24 @@ def admin_fulfill_order(order_id):
                     o["fulfilled"] = not o.get("fulfilled", False)
                     break
             github_save_orders(orders_list, sha, f"Toggle fulfilled {order_id}")
+        except Exception:
+            pass
+    return redirect("/admin/orders")
+
+
+@app.route("/admin/orders/<order_id>/tracking", methods=["POST"])
+def admin_set_tracking(order_id):
+    if not session.get("is_admin"):
+        return redirect("/admin")
+    tracking_number = (request.form.get("tracking_number") or "").strip()
+    if GITHUB_TOKEN:
+        try:
+            orders_list, sha = github_get_orders()
+            for o in orders_list:
+                if o.get("partner_order_id") == order_id:
+                    o["tracking_number"] = tracking_number
+                    break
+            github_save_orders(orders_list, sha, f"Set tracking number {order_id}")
         except Exception:
             pass
     return redirect("/admin/orders")
