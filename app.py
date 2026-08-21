@@ -23,6 +23,7 @@ ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
 GITHUB_REPO = os.environ.get("GITHUB_REPO", "chaeyoonrhee/lasuite-shop")
 GITHUB_ORDERS_PATH = os.environ.get("GITHUB_ORDERS_PATH", "orders/orders.json")
+GITHUB_PURCHASES_PATH = os.environ.get("GITHUB_PURCHASES_PATH", "data/purchases.json")
 GITHUB_API = "https://api.github.com"
 
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
@@ -62,6 +63,29 @@ def github_save_orders(orders_list, sha, message):
     url = f"{GITHUB_API}/repos/{GITHUB_REPO}/contents/{GITHUB_ORDERS_PATH}"
     content_b64 = base64.b64encode(
         json.dumps(orders_list, ensure_ascii=False, indent=2).encode("utf-8")
+    ).decode("utf-8")
+    body = {"message": message, "content": content_b64, "branch": "main"}
+    if sha:
+        body["sha"] = sha
+    r = requests.put(url, json=body, headers=github_headers(), timeout=10)
+    r.raise_for_status()
+
+
+def github_get_purchases():
+    url = f"{GITHUB_API}/repos/{GITHUB_REPO}/contents/{GITHUB_PURCHASES_PATH}"
+    r = requests.get(url, headers=github_headers(), timeout=10)
+    if r.status_code == 404:
+        return [], None
+    r.raise_for_status()
+    data = r.json()
+    content = base64.b64decode(data["content"]).decode("utf-8")
+    return json.loads(content), data["sha"]
+
+
+def github_save_purchases(purchases_list, sha, message):
+    url = f"{GITHUB_API}/repos/{GITHUB_REPO}/contents/{GITHUB_PURCHASES_PATH}"
+    content_b64 = base64.b64encode(
+        json.dumps(purchases_list, ensure_ascii=False, indent=2).encode("utf-8")
     ).decode("utf-8")
     body = {"message": message, "content": content_b64, "branch": "main"}
     if sha:
@@ -437,7 +461,10 @@ ADMIN_ORDERS_HTML = """
   <div class="wrap">
     <div class="head">
       <div class="logo">LA SUITE 주문 내역</div>
-      <a class="logout" href="/admin/logout">로그아웃</a>
+      <div style="display:flex;gap:16px;align-items:baseline;">
+        <a class="logout" href="/admin/purchases">매입/수익</a>
+        <a class="logout" href="/admin/logout">로그아웃</a>
+      </div>
     </div>
     {% if orders %}
       <div class="summary">총 {{ orders|length }}건 · 합계 {{ '{:,}'.format(total) }}원</div>
@@ -480,6 +507,99 @@ ADMIN_ORDERS_HTML = """
       </table>
     {% else %}
       <div class="empty">아직 들어온 주문이 없습니다.</div>
+    {% endif %}
+  </div>
+</body></html>
+"""
+
+ADMIN_PURCHASES_HTML = """
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
+<title>LA SUITE — 매입/수익</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Pretendard:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  body{font-family:'Pretendard',sans-serif;background:#f7f4ef;color:#2b2620;margin:0;padding:40px 24px;}
+  .wrap{max-width:820px;margin:0 auto;}
+  .head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:28px;flex-wrap:wrap;gap:12px;}
+  .logo{font-family:'Cormorant Garamond',serif;font-size:24px;letter-spacing:0.2em;}
+  a.logout{font-size:12.5px;color:#6b6459;text-decoration:none;border-bottom:1px solid #e2dbcd;}
+  table{width:100%;border-collapse:collapse;background:#fff;border:1px solid #e2dbcd;margin-bottom:36px;}
+  th,td{text-align:left;padding:14px 16px;font-size:13px;border-bottom:1px solid #e2dbcd;}
+  th{font-weight:500;color:#6b6459;font-size:11.5px;letter-spacing:0.05em;text-transform:uppercase;background:#efe9df;}
+  tr:last-child td{border-bottom:none;}
+  .amt{font-weight:600;}
+  .profit-pos{color:#5c8a52;}
+  .profit-neg{color:#b5624a;}
+  .empty{padding:60px 20px;text-align:center;color:#6b6459;font-size:14px;background:#fff;border:1px solid #e2dbcd;margin-bottom:36px;}
+  .section-title{font-family:'Cormorant Garamond',serif;font-size:19px;margin-bottom:14px;}
+  .add-form{background:#fff;border:1px solid #e2dbcd;padding:20px;margin-bottom:36px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;}
+  .add-form label{display:block;font-size:11px;color:#6b6459;margin-bottom:5px;}
+  .add-form input{padding:9px 10px;border:1px solid #e2dbcd;font-size:13px;font-family:inherit;}
+  .add-form input[name="memo"]{width:220px;}
+  .add-form button{padding:10px 18px;background:#2b2620;color:#f7f4ef;border:none;font-size:12.5px;cursor:pointer;}
+  .del-btn{background:none;border:none;color:#b5624a;font-size:11px;cursor:pointer;text-decoration:underline;padding:0;}
+</style></head><body>
+  <div class="wrap">
+    <div class="head">
+      <div class="logo">LA SUITE 매입/수익</div>
+      <div style="display:flex;gap:16px;align-items:baseline;">
+        <a class="logout" href="/admin/orders">주문 내역</a>
+        <a class="logout" href="/admin/logout">로그아웃</a>
+      </div>
+    </div>
+
+    <div class="section-title">월별 손익</div>
+    {% if monthly %}
+      <table>
+        <tr><th>월</th><th>매출</th><th>매입</th><th>수익</th></tr>
+        {% for m in monthly %}
+        <tr>
+          <td>{{ m.month }}</td>
+          <td class="amt">{{ '{:,}'.format(m.revenue) }}원</td>
+          <td class="amt">{{ '{:,}'.format(m.cost) }}원</td>
+          <td class="amt {{ 'profit-pos' if m.profit >= 0 else 'profit-neg' }}">{{ '{:,}'.format(m.profit) }}원</td>
+        </tr>
+        {% endfor %}
+      </table>
+    {% else %}
+      <div class="empty">아직 데이터가 없습니다.</div>
+    {% endif %}
+
+    <div class="section-title">매입 등록</div>
+    <form method="post" action="/admin/purchases/add" class="add-form">
+      <div>
+        <label>날짜</label>
+        <input type="date" name="date" value="{{ today }}" required>
+      </div>
+      <div>
+        <label>금액</label>
+        <input type="number" name="amount" placeholder="예: 210000" required>
+      </div>
+      <div>
+        <label>메모</label>
+        <input type="text" name="memo" placeholder="예: 쫀득 핀터플레어 바지 사입">
+      </div>
+      <button type="submit">등록</button>
+    </form>
+
+    <div class="section-title">매입 내역</div>
+    {% if purchases %}
+      <table>
+        <tr><th>날짜</th><th>금액</th><th>메모</th><th></th></tr>
+        {% for p in purchases %}
+        <tr>
+          <td>{{ p.date }}</td>
+          <td class="amt">{{ '{:,}'.format(p.amount) }}원</td>
+          <td>{{ p.memo or '-' }}</td>
+          <td>
+            <form method="post" action="/admin/purchases/{{ p.id }}/delete" onsubmit="return confirm('삭제할까요?');">
+              <button type="submit" class="del-btn">삭제</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </table>
+    {% else %}
+      <div class="empty">등록된 매입 내역이 없습니다.</div>
     {% endif %}
   </div>
 </body></html>
@@ -560,6 +680,99 @@ def admin_set_tracking(order_id):
         except Exception:
             pass
     return redirect("/admin/orders")
+
+
+@app.route("/admin/purchases")
+def admin_purchases():
+    if not session.get("is_admin"):
+        return redirect("/admin")
+    if not GITHUB_TOKEN:
+        return render_template_string(ADMIN_PURCHASES_HTML, purchases=[], monthly=[], today=datetime.utcnow().strftime("%Y-%m-%d"))
+
+    try:
+        purchases_list, _ = github_get_purchases()
+    except Exception:
+        purchases_list = []
+    try:
+        orders_list, _ = github_get_orders()
+    except Exception:
+        orders_list = []
+
+    purchases_list = sorted(purchases_list, key=lambda p: p.get("date") or "", reverse=True)
+
+    revenue_by_month = {}
+    for o in orders_list:
+        if o.get("status") not in ("결제완료", "입금확인"):
+            continue
+        month = (o.get("approved_at") or "")[:7]
+        if not month:
+            continue
+        revenue_by_month[month] = revenue_by_month.get(month, 0) + (o.get("total_amount") or 0)
+
+    cost_by_month = {}
+    for p in purchases_list:
+        month = (p.get("date") or "")[:7]
+        if not month:
+            continue
+        cost_by_month[month] = cost_by_month.get(month, 0) + (p.get("amount") or 0)
+
+    months = sorted(set(revenue_by_month) | set(cost_by_month), reverse=True)
+    monthly = [
+        {
+            "month": m,
+            "revenue": revenue_by_month.get(m, 0),
+            "cost": cost_by_month.get(m, 0),
+            "profit": revenue_by_month.get(m, 0) - cost_by_month.get(m, 0),
+        }
+        for m in months
+    ]
+
+    return render_template_string(
+        ADMIN_PURCHASES_HTML,
+        purchases=purchases_list,
+        monthly=monthly,
+        today=datetime.utcnow().strftime("%Y-%m-%d"),
+    )
+
+
+@app.route("/admin/purchases/add", methods=["POST"])
+def admin_add_purchase():
+    if not session.get("is_admin"):
+        return redirect("/admin")
+    date = (request.form.get("date") or "").strip()
+    memo = (request.form.get("memo") or "").strip()
+    try:
+        amount = int(request.form.get("amount") or 0)
+    except ValueError:
+        amount = 0
+    if date and amount and GITHUB_TOKEN:
+        try:
+            purchases_list, sha = github_get_purchases()
+            purchases_list.append({
+                "id": uuid.uuid4().hex[:8],
+                "date": date,
+                "amount": amount,
+                "memo": memo,
+                "created_at": datetime.utcnow().isoformat(timespec="seconds"),
+            })
+            github_save_purchases(purchases_list, sha, f"Add purchase {date} {amount}")
+        except Exception:
+            pass
+    return redirect("/admin/purchases")
+
+
+@app.route("/admin/purchases/<purchase_id>/delete", methods=["POST"])
+def admin_delete_purchase(purchase_id):
+    if not session.get("is_admin"):
+        return redirect("/admin")
+    if GITHUB_TOKEN:
+        try:
+            purchases_list, sha = github_get_purchases()
+            purchases_list = [p for p in purchases_list if p.get("id") != purchase_id]
+            github_save_purchases(purchases_list, sha, f"Delete purchase {purchase_id}")
+        except Exception:
+            pass
+    return redirect("/admin/purchases")
 
 
 @app.route("/admin/logout")
