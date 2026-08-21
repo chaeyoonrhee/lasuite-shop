@@ -589,6 +589,10 @@ ADMIN_PURCHASES_HTML = """
         <input type="number" name="amount" placeholder="예: 210000" required>
       </div>
       <div>
+        <label>부가세 (선택)</label>
+        <input type="number" name="vat" placeholder="예: 21000">
+      </div>
+      <div>
         <label>메모</label>
         <input type="text" name="memo" placeholder="예: 쫀득 핀터플레어 바지 사입">
       </div>
@@ -598,7 +602,7 @@ ADMIN_PURCHASES_HTML = """
     <div class="section-title">매입 내역</div>
     {% if purchases %}
       <table>
-        <tr><th>날짜</th><th>구분</th><th>금액</th><th>메모</th><th></th></tr>
+        <tr><th>날짜</th><th>구분</th><th>금액</th><th>부가세</th><th>합계</th><th>메모</th><th></th></tr>
         {% for p in purchases %}
         <tr>
           <td>{{ p.date }}</td>
@@ -608,6 +612,8 @@ ADMIN_PURCHASES_HTML = """
             {% else %}<span class="cat-tag">기타</span>{% endif %}
           </td>
           <td class="amt">{{ '{:,}'.format(p.amount) }}원</td>
+          <td class="amt">{{ '{:,}'.format(p.vat or 0) }}원</td>
+          <td class="amt">{{ '{:,}'.format(p.amount + (p.vat or 0)) }}원</td>
           <td>{{ p.memo or '-' }}</td>
           <td>
             <form method="post" action="/admin/purchases/{{ p.id }}/delete" onsubmit="return confirm('삭제할까요?');">
@@ -735,12 +741,12 @@ def admin_purchases():
         month = (p.get("date") or "")[:7]
         if not month:
             continue
-        amount = p.get("amount") or 0
-        cost_by_month[month] = cost_by_month.get(month, 0) + amount
+        total = (p.get("amount") or 0) + (p.get("vat") or 0)
+        cost_by_month[month] = cost_by_month.get(month, 0) + total
         if p.get("category") == "product":
-            cost_product_by_month[month] = cost_product_by_month.get(month, 0) + amount
+            cost_product_by_month[month] = cost_product_by_month.get(month, 0) + total
         else:
-            cost_other_by_month[month] = cost_other_by_month.get(month, 0) + amount
+            cost_other_by_month[month] = cost_other_by_month.get(month, 0) + total
 
     months = sorted(set(revenue_by_month) | set(cost_by_month), reverse=True)
     monthly = [
@@ -776,6 +782,10 @@ def admin_add_purchase():
         amount = int(request.form.get("amount") or 0)
     except ValueError:
         amount = 0
+    try:
+        vat = int(request.form.get("vat") or 0)
+    except ValueError:
+        vat = 0
     if date and amount and GITHUB_TOKEN:
         try:
             purchases_list, sha = github_get_purchases()
@@ -783,6 +793,7 @@ def admin_add_purchase():
                 "id": uuid.uuid4().hex[:8],
                 "date": date,
                 "amount": amount,
+                "vat": vat,
                 "category": category,
                 "memo": memo,
                 "created_at": datetime.utcnow().isoformat(timespec="seconds"),
