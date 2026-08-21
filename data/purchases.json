@@ -16,5 +16,14 @@
     "category": "shipping",
     "memo": "드레곤백 택배비",
     "created_at": "2026-08-21T01:44:51"
+  },
+  {
+    "id": "3edebd94",
+    "date": "2026-08-20",
+    "amount": 48000,
+    "vat": 4800,
+    "category": "product",
+    "memo": "샤 니트 반집업 -2장",
+    "created_at": "2026-08-21T01:46:31"
   }
 ]
