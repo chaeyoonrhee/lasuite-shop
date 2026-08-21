@@ -7,5 +7,14 @@
     "category": "product",
     "memo": "드래곤백 매입 - 1",
     "created_at": "2026-08-21T01:44:20"
+  },
+  {
+    "id": "3f1686b5",
+    "date": "2026-08-18",
+    "amount": 3200,
+    "vat": 0,
+    "category": "shipping",
+    "memo": "드레곤백 택배비",
+    "created_at": "2026-08-21T01:44:51"
   }
 ]
