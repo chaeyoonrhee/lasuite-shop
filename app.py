@@ -535,8 +535,12 @@ ADMIN_PURCHASES_HTML = """
   .add-form label{display:block;font-size:11px;color:#6b6459;margin-bottom:5px;}
   .add-form input{padding:9px 10px;border:1px solid #e2dbcd;font-size:13px;font-family:inherit;}
   .add-form input[name="memo"]{width:220px;}
+  .add-form select{padding:9px 10px;border:1px solid #e2dbcd;font-size:13px;font-family:inherit;background:#fff;}
   .add-form button{padding:10px 18px;background:#2b2620;color:#f7f4ef;border:none;font-size:12.5px;cursor:pointer;}
   .del-btn{background:none;border:none;color:#b5624a;font-size:11px;cursor:pointer;text-decoration:underline;padding:0;}
+  .cat-tag{display:inline-block;padding:2px 8px;font-size:11px;border-radius:3px;background:#efe9df;color:#6b6459;}
+  .cat-tag.product{background:#eef3ea;color:#5c8a52;}
+  .cat-tag.shipping{background:#f0eaf5;color:#7a5ca9;}
 </style></head><body>
   <div class="wrap">
     <div class="head">
@@ -550,11 +554,13 @@ ADMIN_PURCHASES_HTML = """
     <div class="section-title">월별 손익</div>
     {% if monthly %}
       <table>
-        <tr><th>월</th><th>매출</th><th>매입</th><th>수익</th></tr>
+        <tr><th>월</th><th>매출</th><th>매입(상품)</th><th>매입(배송비·기타)</th><th>매입 합계</th><th>수익</th></tr>
         {% for m in monthly %}
         <tr>
           <td>{{ m.month }}</td>
           <td class="amt">{{ '{:,}'.format(m.revenue) }}원</td>
+          <td class="amt">{{ '{:,}'.format(m.cost_product) }}원</td>
+          <td class="amt">{{ '{:,}'.format(m.cost_other) }}원</td>
           <td class="amt">{{ '{:,}'.format(m.cost) }}원</td>
           <td class="amt {{ 'profit-pos' if m.profit >= 0 else 'profit-neg' }}">{{ '{:,}'.format(m.profit) }}원</td>
         </tr>
@@ -571,6 +577,14 @@ ADMIN_PURCHASES_HTML = """
         <input type="date" name="date" value="{{ today }}" required>
       </div>
       <div>
+        <label>구분</label>
+        <select name="category">
+          <option value="product">상품 매입</option>
+          <option value="shipping">배송비</option>
+          <option value="other">기타</option>
+        </select>
+      </div>
+      <div>
         <label>금액</label>
         <input type="number" name="amount" placeholder="예: 210000" required>
       </div>
@@ -584,10 +598,15 @@ ADMIN_PURCHASES_HTML = """
     <div class="section-title">매입 내역</div>
     {% if purchases %}
       <table>
-        <tr><th>날짜</th><th>금액</th><th>메모</th><th></th></tr>
+        <tr><th>날짜</th><th>구분</th><th>금액</th><th>메모</th><th></th></tr>
         {% for p in purchases %}
         <tr>
           <td>{{ p.date }}</td>
+          <td>
+            {% if p.category == 'product' %}<span class="cat-tag product">상품 매입</span>
+            {% elif p.category == 'shipping' %}<span class="cat-tag shipping">배송비</span>
+            {% else %}<span class="cat-tag">기타</span>{% endif %}
+          </td>
           <td class="amt">{{ '{:,}'.format(p.amount) }}원</td>
           <td>{{ p.memo or '-' }}</td>
           <td>
@@ -710,11 +729,18 @@ def admin_purchases():
         revenue_by_month[month] = revenue_by_month.get(month, 0) + (o.get("total_amount") or 0)
 
     cost_by_month = {}
+    cost_product_by_month = {}
+    cost_other_by_month = {}
     for p in purchases_list:
         month = (p.get("date") or "")[:7]
         if not month:
             continue
-        cost_by_month[month] = cost_by_month.get(month, 0) + (p.get("amount") or 0)
+        amount = p.get("amount") or 0
+        cost_by_month[month] = cost_by_month.get(month, 0) + amount
+        if p.get("category") == "product":
+            cost_product_by_month[month] = cost_product_by_month.get(month, 0) + amount
+        else:
+            cost_other_by_month[month] = cost_other_by_month.get(month, 0) + amount
 
     months = sorted(set(revenue_by_month) | set(cost_by_month), reverse=True)
     monthly = [
@@ -722,6 +748,8 @@ def admin_purchases():
             "month": m,
             "revenue": revenue_by_month.get(m, 0),
             "cost": cost_by_month.get(m, 0),
+            "cost_product": cost_product_by_month.get(m, 0),
+            "cost_other": cost_other_by_month.get(m, 0),
             "profit": revenue_by_month.get(m, 0) - cost_by_month.get(m, 0),
         }
         for m in months
@@ -741,6 +769,9 @@ def admin_add_purchase():
         return redirect("/admin")
     date = (request.form.get("date") or "").strip()
     memo = (request.form.get("memo") or "").strip()
+    category = request.form.get("category") or "product"
+    if category not in ("product", "shipping", "other"):
+        category = "product"
     try:
         amount = int(request.form.get("amount") or 0)
     except ValueError:
@@ -752,6 +783,7 @@ def admin_add_purchase():
                 "id": uuid.uuid4().hex[:8],
                 "date": date,
                 "amount": amount,
+                "category": category,
                 "memo": memo,
                 "created_at": datetime.utcnow().isoformat(timespec="seconds"),
             })
