@@ -20,5 +20,33 @@
     "status": "입금확인",
     "approved_at": "2026-08-14T05:09:13",
     "tracking_number": "365132036372"
+  },
+  {
+    "partner_order_id": "d5949c6e35044658ac23ba789df739b7",
+    "items": [
+      {
+        "kr": "샤 니트 반집업",
+        "price": 35000,
+        "qty": 1,
+        "size": "진베이지"
+      },
+      {
+        "kr": "드레곤백 (이너백 포함)",
+        "price": 45000,
+        "qty": 1,
+        "size": "연두"
+      }
+    ],
+    "total_amount": 83500,
+    "shipping_fee": 3500,
+    "orderer_name": "장미인애",
+    "orderer_phone": "01047992823",
+    "shipping_name": "장미인애",
+    "shipping_phone": "01047992823",
+    "shipping_address": "인천 연수구 송도동397-5 힐스테이트레이크3차 304동 4002호",
+    "partner_user_id": "4516f6b4-715a-4445-a0cf-84dd95382f69",
+    "payment_method": "kakaopay",
+    "status": "결제완료",
+    "approved_at": "2026-08-26T20:02:24"
   }
 ]
