@@ -456,7 +456,7 @@ ADMIN_ORDERS_HTML = """
   .confirm-btn{margin-top:6px;padding:5px 10px;font-size:11px;background:#2b2620;color:#f7f4ef;border:none;cursor:pointer;}
   .tracking-form{display:flex;gap:4px;margin-top:4px;}
   .tracking-form input{width:110px;padding:5px 6px;font-size:11px;border:1px solid #e2dbcd;font-family:inherit;}
-  .tracking-form button{padding:5px 8px;font-size:11px;background:#2b2620;color:#f7f4ef;border:none;cursor:pointer;}
+  .tracking-form button{padding:5px 8px;font-size:11px;background:#2b2620;color:#f7f4ef;border:none;cursor:pointer;}  .del-btn{padding:5px 10px;font-size:11px;background:#b5624a;color:#fff;border:none;cursor:pointer;margin-left:6px;}
 </style></head><body>
   <div class="wrap">
     <div class="head">
@@ -499,7 +499,7 @@ ADMIN_ORDERS_HTML = """
           <td class="amt">{{ '{:,}'.format(o.total_amount) }}원{% if o.shipping_fee %}<br><span style="font-weight:400;color:#6b6459;font-size:11px;">(배송비 {{ '{:,}'.format(o.shipping_fee) }}원 포함)</span>{% endif %}</td>
           <td>
             <form method="post" action="/admin/orders/{{ o.partner_order_id }}/fulfill">
-              <button type="submit" class="confirm-btn" style="{% if o.fulfilled %}background:#5c8a52;{% endif %}">{{ '처리완료 ✓' if o.fulfilled else '처리완료로 표시' }}</button>
+              <button type="submit" class="confirm-btn" style="{% if o.fulfilled %}background:#5c8a52;{% endif %}">{{ '처리완료 ✓' if o.fulfilled else '처리완료로 표시' }}</button><button type="button" class="del-btn" onclick="if(confirm('정말 삭제할까요? 복구할 수 없습니다.')){fetch('/admin/orders/{{ o.partner_order_id }}/delete',{method:'POST'}).then(()=>location.reload());}">삭제</button>
             </form>
           </td>
         </tr>
@@ -702,6 +702,20 @@ def admin_set_tracking(order_id):
                     o["tracking_number"] = tracking_number
                     break
             github_save_orders(orders_list, sha, f"Set tracking number {order_id}")
+        except Exception:
+            pass
+    return redirect("/admin/orders")
+
+
+@app.route("/admin/orders/<order_id>/delete", methods=["POST"])
+def admin_delete_order(order_id):
+    if not session.get("is_admin"):
+        return redirect("/admin")
+    if GITHUB_TOKEN:
+        try:
+            orders_list, sha = github_get_orders()
+            orders_list = [o for o in orders_list if o.get("partner_order_id") != order_id]
+            github_save_orders(orders_list, sha, f"Delete order {order_id}")
         except Exception:
             pass
     return redirect("/admin/orders")
