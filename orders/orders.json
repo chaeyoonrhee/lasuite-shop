@@ -70,27 +70,5 @@
     "payment_method": "kakaopay",
     "status": "결제완료",
     "approved_at": "2026-08-26T22:40:08"
-  },
-  {
-    "partner_order_id": "93c954338a5c4919a89b45d151880618",
-    "items": [
-      {
-        "kr": "샤 니트 반집업",
-        "price": 35000,
-        "qty": 1,
-        "size": "아이보리"
-      }
-    ],
-    "total_amount": 38500,
-    "shipping_fee": 3500,
-    "orderer_name": "ㅇ",
-    "orderer_phone": "4",
-    "shipping_name": "ㅇ",
-    "shipping_phone": "4",
-    "shipping_address": "ㅇㅇ",
-    "partner_user_id": "ffe7be75-eaa7-47b3-8cf7-11613763fb84",
-    "payment_method": "kakaopay",
-    "status": "결제완료",
-    "approved_at": "2026-08-26T22:42:19"
   }
 ]
