@@ -48,27 +48,5 @@
     "payment_method": "kakaopay",
     "status": "결제완료",
     "approved_at": "2026-08-26T20:02:24"
-  },
-  {
-    "partner_order_id": "f2de6bde0ea9401c823b5cce0ec71b06",
-    "items": [
-      {
-        "kr": "샤 니트 반집업",
-        "price": 35000,
-        "qty": 1,
-        "size": "진베이지"
-      }
-    ],
-    "total_amount": 38500,
-    "shipping_fee": 3500,
-    "orderer_name": "이채윰",
-    "orderer_phone": "01091568588",
-    "shipping_name": "이채윰",
-    "shipping_phone": "01091568588",
-    "shipping_address": "대사관로",
-    "partner_user_id": "b5c54363-1e35-449a-8ebd-73e6e9c5bae5",
-    "payment_method": "kakaopay",
-    "status": "결제완료",
-    "approved_at": "2026-08-26T22:40:08"
   }
 ]
