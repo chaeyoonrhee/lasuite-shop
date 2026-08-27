@@ -43,5 +43,14 @@
     "category": "other",
     "memo": "샤 니트 반집업 - 신상마켓 배송비",
     "created_at": "2026-08-21T01:48:00"
+  },
+  {
+    "id": "5fda5cb6",
+    "date": "2026-08-26",
+    "amount": 32000,
+    "vat": 0,
+    "category": "product",
+    "memo": "블렌딩/드래곤백-1개",
+    "created_at": "2026-08-27T02:43:31"
   }
 ]
