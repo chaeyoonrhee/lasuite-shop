@@ -52,5 +52,14 @@
     "category": "product",
     "memo": "블렌딩/드래곤백-1개",
     "created_at": "2026-08-27T02:43:31"
+  },
+  {
+    "id": "d11d0ada",
+    "date": "2026-08-27",
+    "amount": 4000,
+    "vat": 0,
+    "category": "shipping",
+    "memo": "블렌딩/드래곤백-1개 배송료",
+    "created_at": "2026-08-27T02:43:57"
   }
 ]
