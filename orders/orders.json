@@ -48,5 +48,27 @@
     "payment_method": "kakaopay",
     "status": "결제완료",
     "approved_at": "2026-08-26T20:02:24"
+  },
+  {
+    "partner_order_id": "f3b4e161d48341aeb335c7846498f237",
+    "items": [
+      {
+        "kr": "샤 니트 반집업",
+        "price": 35000,
+        "qty": 1,
+        "size": "아이보리"
+      }
+    ],
+    "total_amount": 38500,
+    "shipping_fee": 3500,
+    "orderer_name": "이채윤",
+    "orderer_phone": "01091568585",
+    "shipping_name": "이채윤",
+    "shipping_phone": "01091568585",
+    "shipping_address": "서울시 용산구 대사관로 12길 3 발렛부스 안",
+    "partner_user_id": "07a50e1d-ae97-4e20-abb8-0a7c4c48b5a8",
+    "payment_method": "kakaopay",
+    "status": "결제완료",
+    "approved_at": "2026-08-27T11:16:11"
   }
 ]
