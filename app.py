@@ -444,7 +444,7 @@ ADMIN_ORDERS_HTML = """
   .logo{font-family:'Cormorant Garamond',serif;font-size:24px;letter-spacing:0.2em;}
   a.logout{font-size:12.5px;color:#6b6459;text-decoration:none;border-bottom:1px solid #e2dbcd;}
   .table-scroll{overflow-x:auto;}
-  table{width:100%;min-width:1200px;border-collapse:collapse;background:#fff;border:1px solid #e2dbcd;}
+  table{width:100%;min-width:1550px;border-collapse:collapse;background:#fff;border:1px solid #e2dbcd;}
   th,td{text-align:left;padding:14px 16px;font-size:13px;border-bottom:1px solid #e2dbcd;}
   th{font-weight:500;color:#6b6459;font-size:11.5px;letter-spacing:0.05em;text-transform:uppercase;background:#efe9df;}
   tr:last-child td{border-bottom:none;}
@@ -471,7 +471,7 @@ ADMIN_ORDERS_HTML = """
       <div class="summary">총 {{ orders|length }}건 · 합계 {{ '{:,}'.format(total) }}원</div>
       <div class="table-scroll">
       <table>
-        <tr><th>주문시각</th><th>주문번호</th><th style="min-width:160px;">상품</th><th>주문자</th><th>받는분</th><th>연락처</th><th style="min-width:200px;">배송지</th><th>결제수단</th><th>상태</th><th>운송장번호(GS25)</th><th>금액</th><th>처리</th></tr>
+        <tr><th style="min-width:140px;">주문시각</th><th style="min-width:90px;">주문번호</th><th style="min-width:160px;">상품</th><th style="min-width:100px;">주문자</th><th style="min-width:90px;">받는분</th><th style="min-width:110px;">연락처</th><th style="min-width:200px;">배송지</th><th style="min-width:100px;">결제수단</th><th style="min-width:90px;">상태</th><th style="min-width:160px;">운송장번호(GS25)</th><th style="min-width:100px;">금액</th><th style="min-width:160px;">처리</th></tr>
         {% for o in orders %}
         <tr{% if o.fulfilled %} style="opacity:0.55;"{% endif %}>
           <td>{{ o.approved_at or '-' }}</td>
