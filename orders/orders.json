@@ -49,6 +49,7 @@
     "payment_method": "kakaopay",
     "status": "결제완료",
     "approved_at": "2026-08-26T20:02:24",
-    "tracking_number": "365136029426"
+    "tracking_number": "365136029426",
+    "fulfilled": true
   }
 ]
