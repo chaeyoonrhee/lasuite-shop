@@ -621,7 +621,7 @@ function openModal(p){
     const colorLabel = document.getElementById('colorLabel');
 
     function renderThumbs(){
-      const imgs = p.colors[selectedColorIdx].images.concat(p.groupImages || []);
+      const imgs = [...new Set(p.colors.flatMap(c => c.images).concat(p.groupImages || []))];
       thumbRow.innerHTML = imgs.map((src,i) => `<img class="thumb ${i===selectedImageIdx?'selected':''}" data-idx="${i}" src="${src}">`).join('');
       thumbRow.querySelectorAll('.thumb').forEach(t => {
         t.addEventListener('click', () => {
@@ -643,7 +643,6 @@ function openModal(p){
         selectedSize = p.colors[selectedColorIdx].label;
         colorLabel.textContent = p.colors[selectedColorIdx].label;
         mainImg.src = p.colors[selectedColorIdx].images[0];
-        renderThumbs();
       });
     });
     selectedSize = p.colors[0].label;
