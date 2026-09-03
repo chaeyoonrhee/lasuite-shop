@@ -493,6 +493,7 @@ async function loadProducts(){
   try{
     const res = await fetch('/api/products');
     products = await res.json();
+    products.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0) || b.id - a.id);
   } catch(err){
     products = [];
   }
