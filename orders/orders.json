@@ -51,5 +51,27 @@
     "approved_at": "2026-08-26T20:02:24",
     "tracking_number": "365136029426",
     "fulfilled": true
+  },
+  {
+    "partner_order_id": "5278b0839499482e84479524f2ba89fd",
+    "items": [
+      {
+        "kr": "샤 니트 반집업",
+        "price": 36500,
+        "qty": 2,
+        "size": "아이보리"
+      }
+    ],
+    "total_amount": 76500,
+    "shipping_fee": 3500,
+    "orderer_name": "안희영",
+    "orderer_phone": "01053335391",
+    "shipping_name": "안희영",
+    "shipping_phone": "01053335391",
+    "shipping_address": "레브빌",
+    "partner_user_id": "8af1700c-90cb-4ab2-afa8-d437b723073b",
+    "payment_method": "kakaopay",
+    "status": "결제완료",
+    "approved_at": "2026-09-06T22:10:01"
   }
 ]
