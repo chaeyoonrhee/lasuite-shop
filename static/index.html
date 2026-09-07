@@ -214,6 +214,15 @@
   }
   .size-btn:hover{border-color:var(--gold);}
   .size-btn.selected{background:var(--ink); border-color:var(--ink); color:var(--ivory);}
+  .size-opt-row{display:flex; gap:8px; margin-bottom:26px; flex-wrap:wrap;}
+  .size-opt-btn{
+    padding:9px 16px; border:1px solid var(--line); background:transparent;
+    font-size:12.5px; line-height:1.5; cursor:pointer; color:var(--ink); transition:.2s; text-align:center;
+  }
+  .size-opt-btn .sp{display:block; font-size:11px; color:var(--ink-soft); margin-top:2px;}
+  .size-opt-btn:hover{border-color:var(--gold);}
+  .size-opt-btn.selected{background:var(--ink); border-color:var(--ink); color:var(--ivory);}
+  .size-opt-btn.selected .sp{color:var(--ivory); opacity:.75;}
   .qty-row{display:flex; align-items:center; gap:16px; margin-bottom:30px;}
   .qty-control{display:flex; align-items:center; border:1px solid var(--line);}
   .qty-control button{width:34px; height:36px; border:none; background:none; cursor:pointer; font-size:15px;}
@@ -493,6 +502,7 @@ async function loadProducts(){
   try{
     const res = await fetch('/api/products');
     products = await res.json();
+    products.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0) || b.id - a.id);
   } catch(err){
     products = [];
   }
@@ -532,7 +542,7 @@ function renderGrid(){
         <div class="name-kr">${p.kr}</div>
         <div class="price-row">
           ${p.originalPrice ? `<span class="price-original">${won(p.originalPrice)}</span><span class="discount">${Math.round((1-p.price/p.originalPrice)*100)}%</span>` : ''}
-          <span class="price">${won(p.price)}</span>
+          <span class="price">${p.sizeOptions ? won(Math.min(...p.sizeOptions.map(s=>s.price))) + '~' : won(p.price)}</span>
         </div>
       </div>
     `;
@@ -554,12 +564,16 @@ let selectedSize = null;
 let selectedQty = 1;
 let selectedColorIdx = 0;
 let selectedImageIdx = 0;
+let selectedSizeOptIdx = 0;
+let currentPrice = 0;
 
 function openModal(p){
   selectedSize = null;
   selectedQty = 1;
   selectedColorIdx = 0;
   selectedImageIdx = 0;
+  selectedSizeOptIdx = 0;
+  currentPrice = p.sizeOptions ? p.sizeOptions[0].price : p.price;
   const modal = document.getElementById('modalBody');
   const isBag = !!p.colors;
 
@@ -576,13 +590,19 @@ function openModal(p){
       <button class="modal-close" id="modalClose">&times;</button>
       <div class="name-en">${p.en}</div>
       <h2 class="serif">${p.kr}</h2>
-      <span class="price">${won(p.price)}</span>
+      <span class="price" id="modalPrice">${won(currentPrice)}</span>
       <p class="desc">${p.desc}</p>
       ${isBag ? `
         <div class="option-label">COLOR — <span id="colorLabel">${p.colors[0].label}</span></div>
         <div class="color-row" id="colorRow">
           ${p.colors.map((c,i) => `<button class="color-swatch ${i===0?'selected':''}" data-idx="${i}" style="background:${c.hex}" title="${c.label}"></button>`).join('')}
         </div>
+        ${p.sizeOptions ? `
+          <div class="option-label">SIZE — <span id="sizeOptLabel">${p.sizeOptions[0].label}</span></div>
+          <div class="size-opt-row" id="sizeOptRow">
+            ${p.sizeOptions.map((s,i) => `<button class="size-opt-btn ${i===0?'selected':''}" data-idx="${i}">${s.label}<span class="sp">${won(s.price)}</span></button>`).join('')}
+          </div>
+        ` : ''}
       ` : `
         <div class="option-label">SIZE</div>
         <div class="size-row" id="sizeRow">
@@ -596,7 +616,7 @@ function openModal(p){
           <span id="qtyVal">1</span>
           <button id="qtyPlus" ${p.soldout ? 'disabled' : ''}>+</button>
         </div>
-        <span style="font-size:13px;color:var(--ink-soft)">소계 <b id="subtotal" style="color:var(--ink)">${won(p.price)}</b></span>
+        <span style="font-size:13px;color:var(--ink-soft)">소계 <b id="subtotal" style="color:var(--ink)">${won(currentPrice)}</b></span>
       </div>
       <div class="btn-row">
         <button class="btn primary" id="addToCartBtn" ${p.soldout ? 'disabled' : ''}>${p.soldout ? '품절' : '장바구니 담기'}</button>
@@ -604,7 +624,7 @@ function openModal(p){
       ${isBag ? `
         <div class="info-accordion">
           <div class="info-block"><b>소재</b><p>${p.material}</p></div>
-          <div class="info-block"><b>사이즈</b><p>${p.sizeGuide}</p></div>
+          <div class="info-block"><b>사이즈</b><p id="sizeGuideText">${p.sizeOptions ? p.sizeOptions[0].dimensions : p.sizeGuide}</p></div>
           <div class="info-block"><b>안내사항</b><p>${p.notices.join('<br>')}</p></div>
           <div class="info-block"><b>주문 시 유의사항</b><p>${p.orderNotice}</p></div>
           <div class="info-block"><b>교환/반품 안내</b><p>${p.returnNotice}</p></div>
@@ -634,18 +654,45 @@ function openModal(p){
     }
     renderThumbs();
 
+    function updateSelectedLabel(){
+      selectedSize = p.sizeOptions
+        ? `${p.colors[selectedColorIdx].label} / ${p.sizeOptions[selectedSizeOptIdx].label}`
+        : p.colors[selectedColorIdx].label;
+    }
+
     document.querySelectorAll('#colorRow .color-swatch').forEach(b => {
       b.addEventListener('click', () => {
         document.querySelectorAll('#colorRow .color-swatch').forEach(x => x.classList.remove('selected'));
         b.classList.add('selected');
         selectedColorIdx = +b.dataset.idx;
         selectedImageIdx = 0;
-        selectedSize = p.colors[selectedColorIdx].label;
+        updateSelectedLabel();
         colorLabel.textContent = p.colors[selectedColorIdx].label;
         mainImg.src = p.colors[selectedColorIdx].images[0];
       });
     });
-    selectedSize = p.colors[0].label;
+
+    if(p.sizeOptions){
+      const sizeOptLabel = document.getElementById('sizeOptLabel');
+      const sizeGuideText = document.getElementById('sizeGuideText');
+      const modalPrice = document.getElementById('modalPrice');
+      document.querySelectorAll('#sizeOptRow .size-opt-btn').forEach(b => {
+        b.addEventListener('click', () => {
+          document.querySelectorAll('#sizeOptRow .size-opt-btn').forEach(x => x.classList.remove('selected'));
+          b.classList.add('selected');
+          selectedSizeOptIdx = +b.dataset.idx;
+          const opt = p.sizeOptions[selectedSizeOptIdx];
+          currentPrice = opt.price;
+          updateSelectedLabel();
+          sizeOptLabel.textContent = opt.label;
+          sizeGuideText.textContent = opt.dimensions;
+          modalPrice.textContent = won(currentPrice);
+          subtotal.textContent = won(currentPrice*selectedQty);
+        });
+      });
+    }
+
+    updateSelectedLabel();
   } else {
     document.querySelectorAll('#sizeRow .size-btn').forEach(b => {
       b.addEventListener('click', () => {
@@ -659,15 +706,15 @@ function openModal(p){
   const qtyVal = document.getElementById('qtyVal');
   const subtotal = document.getElementById('subtotal');
   document.getElementById('qtyMinus')?.addEventListener('click', () => {
-    if(selectedQty > 1){ selectedQty--; qtyVal.textContent = selectedQty; subtotal.textContent = won(p.price*selectedQty); }
+    if(selectedQty > 1){ selectedQty--; qtyVal.textContent = selectedQty; subtotal.textContent = won(currentPrice*selectedQty); }
   });
   document.getElementById('qtyPlus')?.addEventListener('click', () => {
-    selectedQty++; qtyVal.textContent = selectedQty; subtotal.textContent = won(p.price*selectedQty);
+    selectedQty++; qtyVal.textContent = selectedQty; subtotal.textContent = won(currentPrice*selectedQty);
   });
   document.getElementById('addToCartBtn')?.addEventListener('click', () => {
     if(!selectedSize){ showToast(isBag ? '색상을 선택해 주세요' : '사이즈를 선택해 주세요'); return; }
     const thumb = isBag ? p.colors[selectedColorIdx].images[0] : null;
-    cart.push({...p, size: selectedSize, qty: selectedQty, thumb});
+    cart.push({...p, size: selectedSize, qty: selectedQty, thumb, price: currentPrice});
     renderCart();
     closeModal();
     showToast(`${p.kr}(${selectedSize}) 장바구니에 담았습니다`);

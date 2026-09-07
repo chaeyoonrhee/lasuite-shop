@@ -592,5 +592,52 @@
         ]
       }
     ]
+  },
+  {
+    "id": 8,
+    "en": "CROCO EMBOSSED COWHIDE BOWLING BAG",
+    "kr": "크로커 소가죽 아스트 볼링백",
+    "price": 159000,
+    "shippingFee": 3500,
+    "cat": [
+      "bag"
+    ],
+    "material": "소가죽 70%, 양가죽 30% (안감)",
+    "desc": "은은한 광택감이 감도는 프리미엄 악어 패턴 엠보싱 가죽을 적용하여 클래식하면서도, 각이 잡힌 깔끔한 스퀴어 실루엛으로 세련된 무드를 더했습니다. 넘넘한 수납공간과 투웨이 메탈 지퍼로 모던하고 시크한 매력을 갖춘 볼링백입니다.",
+    "sizeGuide": "[일반] 밑면가로 31cm / 밑면세로(폭) 10cm / 높이 18cm  ·  [스몰] 밑면가로 25cm / 밑면세로(폭) 10cm / 높이 14cm",
+    "notices": [
+      "색상은 모니터 해상도 및 설정에 따라 실제 색상과 다소 차이가 있을 수 있습니다.",
+      "사이즈는 재는 위치에 따라 약 2~5cm 오차가 있을 수 있습니다."
+    ],
+    "orderNotice": "라스윗의 모든 제품은 주문 후 거래처 오더 방식으로 진행됩니다. 주문 시 3~7일 정도 소요되며, 리오더 상품의 경우 7~14일까지 소요될 수 있으니 여유롭게 주문 부탁드립니다. 부분 배송은 어려우며, 배송비를 추가하시면 부분 배송이 가능하니 참고 부탁드립니다.",
+    "returnNotice": "주문 후 집화(발송) 완료 후 취소하시면 왕복 배송비가 부과될 수 있으니, 신중히 고려하신 후 주문 부탁드립니다.",
+    "createdAt": "2026-09-07",
+    "sizeOptions": [
+      {
+        "key": "regular",
+        "label": "일반",
+        "price": 159000,
+        "dimensions": "밑면가로 31cm / 밑면세로(폭) 10cm / 높이 18cm"
+      },
+      {
+        "key": "small",
+        "label": "스몰",
+        "price": 149000,
+        "dimensions": "밑면가로 25cm / 밑면세로(폭) 10cm / 높이 14cm"
+      }
+    ],
+    "colors": [
+      {
+        "key": "black",
+        "label": "블랙",
+        "hex": "#181818",
+        "images": [
+          "images/ast-bowling-bag-croco/black_1.jpg",
+          "images/ast-bowling-bag-croco/black_2.jpg",
+          "images/ast-bowling-bag-croco/black_3.jpg",
+          "images/ast-bowling-bag-croco/black_4.jpg"
+        ]
+      }
+    ]
   }
 ]
