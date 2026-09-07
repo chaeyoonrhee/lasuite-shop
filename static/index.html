@@ -624,7 +624,7 @@ function openModal(p){
       ${isBag ? `
         <div class="info-accordion">
           <div class="info-block"><b>소재</b><p>${p.material}</p></div>
-          <div class="info-block"><b>사이즈</b><p id="sizeGuideText">${p.sizeOptions ? p.sizeOptions[0].dimensions : p.sizeGuide}</p></div>
+          <div class="info-block"><b>사이즈</b><p id="sizeGuideText">${p.sizeGuide}</p></div>
           <div class="info-block"><b>안내사항</b><p>${p.notices.join('<br>')}</p></div>
           <div class="info-block"><b>주문 시 유의사항</b><p>${p.orderNotice}</p></div>
           <div class="info-block"><b>교환/반품 안내</b><p>${p.returnNotice}</p></div>
@@ -674,7 +674,6 @@ function openModal(p){
 
     if(p.sizeOptions){
       const sizeOptLabel = document.getElementById('sizeOptLabel');
-      const sizeGuideText = document.getElementById('sizeGuideText');
       const modalPrice = document.getElementById('modalPrice');
       document.querySelectorAll('#sizeOptRow .size-opt-btn').forEach(b => {
         b.addEventListener('click', () => {
@@ -685,7 +684,6 @@ function openModal(p){
           currentPrice = opt.price;
           updateSelectedLabel();
           sizeOptLabel.textContent = opt.label;
-          sizeGuideText.textContent = opt.dimensions;
           modalPrice.textContent = won(currentPrice);
           subtotal.textContent = won(currentPrice*selectedQty);
         });
