@@ -19,9 +19,27 @@
     "returnNotice": "주문 후 집화(발송) 완료 후 취소하시면 왕복 배송비가 부과될 수 있으니, 신중히 고려하신 후 주문 부탁드립니다.",
     "colors": [
       {
+        "key": "lightbeige",
+        "label": "연베이지",
+        "hex": "#ece5d8",
+        "images": [
+          "images/dragon-bag/ivory_1.jpg",
+          "images/dragon-bag/ivory_2.jpg",
+          "images/dragon-bag/camel_1.jpg",
+          "images/dragon-bag/camel_2.jpg",
+          "images/dragon-bag/green_1.jpg",
+          "images/dragon-bag/green_2.jpg",
+          "images/dragon-bag/blue_1.jpg",
+          "images/dragon-bag/black_1.jpg",
+          "images/dragon-bag/black_2.jpg",
+          "images/dragon-bag/brown_1.jpg",
+          "images/dragon-bag/brown_2.jpg"
+        ]
+      },
+      {
         "key": "ivory",
         "label": "아이보리",
-        "hex": "#ece5d8",
+        "hex": "#f7f4ef",
         "images": [
           "images/dragon-bag/ivory_1.jpg",
           "images/dragon-bag/ivory_2.jpg",
