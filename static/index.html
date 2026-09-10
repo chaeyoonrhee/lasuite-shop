@@ -148,6 +148,7 @@
   }
   .badge.sale{background:var(--gold);}
   .badge.soldout{background:#b8b0a1;}
+  .badge.vip{background:#7a5ca9;}
   .quick-add{
     position:absolute; bottom:0; left:0; right:0;
     background:var(--ink); color:var(--ivory);
@@ -354,6 +355,7 @@
     </nav>
     <div class="header-icons">
       <button class="icon-btn" id="orderLookupBtn">주문조회</button>
+      <button class="icon-btn" id="vipBtn">VIP</button>
       <button class="icon-btn" id="cartBtn">CART<span class="cart-count" id="cartCount">0</span></button>
     </div>
   </div>
@@ -449,6 +451,48 @@
   </div>
 </div>
 
+<div class="cart-drawer" id="vipDrawer">
+  <div class="cart-head">
+    <h3 class="serif">VIP</h3>
+    <button class="modal-close" id="vipClose">&times;</button>
+  </div>
+  <div style="padding:24px 28px;">
+
+    <div id="vipLoggedView" style="display:none;">
+      <p style="font-size:14px;color:var(--ink);margin-bottom:20px;"><span id="vipNameText"></span>님, VIP 회원입니다.</p>
+      <button class="btn primary" id="vipLogoutBtn" style="width:100%;">로그아웃</button>
+    </div>
+
+    <div id="vipLoginView">
+      <div class="shipping-form" style="margin-bottom:0;">
+        <input type="text" id="vipLoginName" placeholder="성함">
+        <input type="tel" id="vipLoginPhone" placeholder="연락처 (010-0000-0000)">
+      </div>
+      <button class="btn primary" id="vipLoginBtn" style="width:100%; margin-top:4px;">로그인</button>
+      <div id="vipLoginMsg" style="margin-top:12px;font-size:12.5px;color:var(--ink-soft);"></div>
+      <p style="margin-top:24px;font-size:12.5px;color:var(--ink-soft);text-align:center;">
+        아직 VIP가 아니신가요? <a href="#" id="vipShowApply" style="color:var(--ink);text-decoration:underline;">VIP 신청하기</a>
+      </p>
+    </div>
+
+    <div id="vipApplyView" style="display:none;">
+      <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:16px;line-height:1.7;">
+        신청해 주시면 확인 후 VIP로 승인해 드립니다. 승인 완료 후 위 로그인으로 이용하실 수 있어요.
+      </p>
+      <div class="shipping-form" style="margin-bottom:0;">
+        <input type="text" id="vipApplyName" placeholder="성함">
+        <input type="tel" id="vipApplyPhone" placeholder="연락처 (010-0000-0000)">
+      </div>
+      <button class="btn primary" id="vipApplySubmitBtn" style="width:100%; margin-top:4px;">VIP 신청하기</button>
+      <div id="vipApplyMsg" style="margin-top:12px;font-size:12.5px;color:var(--ink-soft);"></div>
+      <p style="margin-top:24px;font-size:12.5px;color:var(--ink-soft);text-align:center;">
+        이미 신청하셨나요? <a href="#" id="vipShowLogin" style="color:var(--ink);text-decoration:underline;">로그인으로 돌아가기</a>
+      </p>
+    </div>
+
+  </div>
+</div>
+
 <div class="overlay" id="overlay">
   <div class="modal" id="modalBody"></div>
 </div>
@@ -531,7 +575,7 @@ function renderGrid(){
     const thumb = p.colors ? p.colors[0].images[0] : null;
     card.innerHTML = `
       <div class="product-media" style="background:${thumb ? '#fff' : p.tone+'22'};color:${p.soldout ? '#c2bcae' : '#3a332a'}">
-        ${isNew(p) && !p.soldout ? '<span class="badge">NEW</span>' : ''}
+        ${p.vipOnly ? '<span class="badge vip">VIP</span>' : isNew(p) && !p.soldout ? '<span class="badge">NEW</span>' : ''}
         ${p.sale ? '<span class="badge sale">SALE</span>' : ''}
         ${p.soldout ? '<span class="badge soldout">SOLD OUT</span>' : ''}
         ${thumb ? `<img src="${thumb}" alt="${p.kr}" style="width:100%;height:100%;object-fit:cover;">` : shapes[p.shape]}
@@ -802,6 +846,106 @@ document.getElementById('lookupSubmitBtn').addEventListener('click', async () =>
     btn.textContent = '조회하기';
     resultsEl.innerHTML = '<div class="cart-empty">서버에 연결할 수 없습니다</div>';
   }
+});
+
+let isVip = false;
+const vipDrawer = document.getElementById('vipDrawer');
+const vipBtn = document.getElementById('vipBtn');
+const vipLoggedView = document.getElementById('vipLoggedView');
+const vipLoginView = document.getElementById('vipLoginView');
+const vipApplyView = document.getElementById('vipApplyView');
+
+function updateVipButton(){
+  vipBtn.textContent = isVip ? 'VIP ✓' : 'VIP';
+}
+
+function showVipView(view){
+  vipLoggedView.style.display = view === 'logged' ? 'block' : 'none';
+  vipLoginView.style.display = view === 'login' ? 'block' : 'none';
+  vipApplyView.style.display = view === 'apply' ? 'block' : 'none';
+}
+
+async function checkVipStatus(){
+  try{
+    const res = await fetch('/api/vip/status');
+    const data = await res.json();
+    isVip = !!data.isVip;
+    if(isVip){ document.getElementById('vipNameText').textContent = data.name || ''; }
+    updateVipButton();
+  } catch(err){ /* ignore */ }
+}
+checkVipStatus();
+
+vipBtn.addEventListener('click', () => {
+  showVipView(isVip ? 'logged' : 'login');
+  vipDrawer.classList.add('open'); scrim.classList.add('open');
+});
+document.getElementById('vipClose').addEventListener('click', () => { vipDrawer.classList.remove('open'); scrim.classList.remove('open'); });
+scrim.addEventListener('click', () => { vipDrawer.classList.remove('open'); });
+
+document.getElementById('vipShowApply').addEventListener('click', (e) => { e.preventDefault(); showVipView('apply'); });
+document.getElementById('vipShowLogin').addEventListener('click', (e) => { e.preventDefault(); showVipView('login'); });
+
+document.getElementById('vipLoginBtn').addEventListener('click', async () => {
+  const name = document.getElementById('vipLoginName').value.trim();
+  const phone = document.getElementById('vipLoginPhone').value.trim();
+  const msgEl = document.getElementById('vipLoginMsg');
+  if(!name || !phone){ msgEl.textContent = '성함과 연락처를 입력해 주세요'; return; }
+  const btn = document.getElementById('vipLoginBtn');
+  btn.disabled = true; btn.textContent = '확인 중...'; msgEl.textContent = '';
+  try{
+    const res = await fetch('/api/vip/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({name, phone})
+    });
+    const data = await res.json();
+    btn.disabled = false; btn.textContent = '로그인';
+    if(!res.ok){ msgEl.textContent = data.error || '로그인 중 오류가 발생했습니다'; return; }
+    isVip = true;
+    document.getElementById('vipNameText').textContent = data.name || name;
+    updateVipButton();
+    showVipView('logged');
+    loadProducts();
+    showToast('VIP로 로그인되었습니다');
+  } catch(err){
+    btn.disabled = false; btn.textContent = '로그인';
+    msgEl.textContent = '서버에 연결할 수 없습니다';
+  }
+});
+
+document.getElementById('vipApplySubmitBtn').addEventListener('click', async () => {
+  const name = document.getElementById('vipApplyName').value.trim();
+  const phone = document.getElementById('vipApplyPhone').value.trim();
+  const msgEl = document.getElementById('vipApplyMsg');
+  if(!name || !phone){ msgEl.textContent = '성함과 연락처를 입력해 주세요'; return; }
+  const btn = document.getElementById('vipApplySubmitBtn');
+  btn.disabled = true; btn.textContent = '신청 중...'; msgEl.textContent = '';
+  try{
+    const res = await fetch('/api/vip/apply', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({name, phone})
+    });
+    const data = await res.json();
+    btn.disabled = false; btn.textContent = 'VIP 신청하기';
+    if(!res.ok){ msgEl.textContent = data.error || '신청 중 오류가 발생했습니다'; return; }
+    msgEl.style.color = 'var(--ink)';
+    msgEl.textContent = '신청이 접수되었습니다. 승인 후 로그인해 주세요.';
+  } catch(err){
+    btn.disabled = false; btn.textContent = 'VIP 신청하기';
+    msgEl.textContent = '서버에 연결할 수 없습니다';
+  }
+});
+
+document.getElementById('vipLogoutBtn').addEventListener('click', async () => {
+  try{ await fetch('/api/vip/logout', {method: 'POST'}); } catch(err){ /* ignore */ }
+  isVip = false;
+  updateVipButton();
+  showVipView('login');
+  vipDrawer.classList.remove('open'); scrim.classList.remove('open');
+  loadProducts();
+  showToast('로그아웃되었습니다');
 });
 
 let toastTimer;
