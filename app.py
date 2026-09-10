@@ -7,6 +7,7 @@ from datetime import datetime
 import requests
 from dotenv import load_dotenv
 from flask import Flask, jsonify, redirect, render_template_string, request, send_from_directory, session
+from werkzeug.security import check_password_hash, generate_password_hash
 
 load_dotenv()
 
@@ -433,41 +434,56 @@ def lookup_orders():
     return jsonify({"orders": result})
 
 
-@app.route("/api/vip/apply", methods=["POST"])
-def vip_apply():
+def _normalize_username(username):
+    return (username or "").strip().lower()
+
+
+@app.route("/api/vip/signup", methods=["POST"])
+def vip_signup():
     data = request.get_json(force=True, silent=True) or {}
+    username = (data.get("username") or "").strip()
+    password = data.get("password") or ""
     name = (data.get("name") or "").strip()
     phone = (data.get("phone") or "").strip()
 
-    if not name or not phone:
-        return jsonify({"error": "성함과 연락처를 모두 입력해 주세요."}), 400
+    if not username or not password or not name or not phone:
+        return jsonify({"error": "아이디, 비밀번호, 성함, 연락처를 모두 입력해 주세요."}), 400
+    if len(username) < 4:
+        return jsonify({"error": "아이디는 4자 이상 입력해 주세요."}), 400
+    if len(password) < 4:
+        return jsonify({"error": "비밀번호는 4자 이상 입력해 주세요."}), 400
 
     if not GITHUB_TOKEN:
         return jsonify({"error": "일시적인 오류입니다. 잠시 후 다시 시도해 주세요."}), 502
 
+    username_norm = _normalize_username(username)
     phone_norm = _normalize_phone(phone)
     try:
         members_list, sha = github_get_members()
-        existing = next(
+        if any(_normalize_username(m.get("username")) == username_norm for m in members_list):
+            return jsonify({"error": "이미 사용 중인 아이디입니다."}), 400
+        existing_phone = next(
             (m for m in members_list if _normalize_phone(m.get("phone", "")) == phone_norm),
             None,
         )
-        if existing:
-            if existing.get("status") == "approved":
+        if existing_phone:
+            if existing_phone.get("status") == "approved":
                 return jsonify({"error": "이미 VIP로 승인된 연락처입니다."}), 400
-            return jsonify({"error": "이미 신청하신 연락처입니다. 승인까지 조금만 기다려 주세요."}), 400
+            return jsonify({"error": "이미 가입 신청하신 연락처입니다. 승인까지 조금만 기다려 주세요."}), 400
 
         member_record = {
             "id": uuid.uuid4().hex,
+            "username": username,
+            "passwordHash": generate_password_hash(password),
             "name": name,
             "phone": phone,
             "status": "pending",
             "appliedAt": datetime.utcnow().isoformat(timespec="seconds"),
         }
         members_list.append(member_record)
-        github_save_members(members_list, sha, f"VIP apply {name}")
+        github_save_members(members_list, sha, f"VIP signup {username}")
     except Exception:
-        return jsonify({"error": "신청 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."}), 502
+        return jsonify({"error": "가입 신청 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."}), 502
 
     return jsonify({"ok": True})
 
@@ -475,11 +491,11 @@ def vip_apply():
 @app.route("/api/vip/login", methods=["POST"])
 def vip_login():
     data = request.get_json(force=True, silent=True) or {}
-    name = (data.get("name") or "").strip()
-    phone = (data.get("phone") or "").strip()
+    username = (data.get("username") or "").strip()
+    password = data.get("password") or ""
 
-    if not name or not phone:
-        return jsonify({"error": "성함과 연락처를 모두 입력해 주세요."}), 400
+    if not username or not password:
+        return jsonify({"error": "아이디와 비밀번호를 입력해 주세요."}), 400
 
     if not GITHUB_TOKEN:
         return jsonify({"error": "일시적인 오류입니다. 잠시 후 다시 시도해 주세요."}), 502
@@ -489,15 +505,15 @@ def vip_login():
     except Exception:
         return jsonify({"error": "확인 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."}), 502
 
-    phone_norm = _normalize_phone(phone)
+    username_norm = _normalize_username(username)
     matched = next(
-        (m for m in members_list if m.get("name") == name and _normalize_phone(m.get("phone", "")) == phone_norm),
+        (m for m in members_list if _normalize_username(m.get("username")) == username_norm),
         None,
     )
-    if not matched:
-        return jsonify({"error": "일치하는 VIP 신청 내역이 없습니다. 먼저 VIP 신청을 해주세요."}), 404
+    if not matched or not check_password_hash(matched.get("passwordHash", ""), password):
+        return jsonify({"error": "아이디 또는 비밀번호가 일치하지 않습니다."}), 401
     if matched.get("status") == "rejected":
-        return jsonify({"error": "VIP 신청이 승인되지 않았습니다."}), 403
+        return jsonify({"error": "VIP 가입 신청이 승인되지 않았습니다."}), 403
     if matched.get("status") != "approved":
         return jsonify({"error": "아직 승인 대기 중입니다. 승인 완료 후 이용해 주세요."}), 403
 
@@ -779,10 +795,11 @@ ADMIN_MEMBERS_HTML = """
     {% if members %}
       <div class="summary">총 {{ members|length }}건</div>
       <table>
-        <tr><th>신청일시</th><th>이름</th><th>연락처</th><th>주문 이력</th><th>상태</th><th>처리</th></tr>
+        <tr><th>신청일시</th><th>아이디</th><th>이름</th><th>연락처</th><th>주문 이력</th><th>상태</th><th>처리</th></tr>
         {% for m in members %}
         <tr>
           <td>{{ m.appliedAt or '-' }}</td>
+          <td>{{ m.username or '-' }}</td>
           <td>{{ m.name }}</td>
           <td>{{ m.phone }}</td>
           <td>
