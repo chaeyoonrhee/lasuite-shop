@@ -3,7 +3,8 @@
     "id": "31df2401765b4d7987d62ec4546795b7",
     "name": "테스트VIP",
     "phone": "01099998888",
-    "status": "pending",
-    "appliedAt": "2026-09-10T02:15:18"
+    "status": "approved",
+    "appliedAt": "2026-09-10T02:15:18",
+    "approvedAt": "2026-09-10T02:17:02"
   }
 ]
