@@ -193,6 +193,67 @@ def api_products():
     ])
 
 
+def _abs_url(path):
+    return f"{BASE_URL.rstrip('/')}/{path.lstrip('/')}"
+
+
+@app.route("/p/<int:product_id>")
+def product_share_page(product_id):
+    """상품별 공유 링크. 카카오톡/인스타 등에 공유했을 때 상품 사진·이름이 뜨도록
+    og:태그를 상품 정보로 치환해서 index.html을 내려준다. 이후 화면은 그대로 SPA로 동작한다."""
+    index_path = os.path.join(app.static_folder, "index.html")
+    with open(index_path, "r", encoding="utf-8") as f:
+        html = f.read()
+
+    try:
+        products, _ = github_get_json_file(GITHUB_PRODUCTS_PATH, [])
+    except Exception:
+        products = []
+
+    is_vip = bool(session.get("is_vip"))
+    product = next(
+        (p for p in products if p.get("id") == product_id and not p.get("hidden")
+         and (not p.get("vipOnly") or is_vip)),
+        None,
+    )
+    if not product:
+        return html
+
+    def esc(s):
+        return (s or "").replace("&", "&amp;").replace('"', "&quot;").replace("<", "&lt;").replace(">", "&gt;")
+
+    title = esc(f"{product.get('kr', 'LA SUITE')} | LA SUITE")
+    desc = esc((product.get("desc") or "")[:150])
+    image_path = product["colors"][0]["images"][0] if product.get("colors") else "app-icon.png"
+    image_url = _abs_url(image_path)
+    page_url = _abs_url(f"p/{product_id}")
+
+    html = html.replace(
+        "<title>LA SUITE — Women's Collection</title>", f"<title>{title}</title>", 1
+    )
+    html = html.replace(
+        '<meta property="og:title" content="LA SUITE — 조용한 우아함, 당신의 일상이 되다">',
+        f'<meta property="og:title" content="{title}">',
+        1,
+    )
+    html = html.replace(
+        '<meta property="og:description" content="절제된 실루엣과 좋은 원단이 만드는 균형. LA SUITE는 과하지 않은 아름다움을 만듭니다.">',
+        f'<meta property="og:description" content="{desc}">',
+        1,
+    )
+    html = html.replace(
+        '<meta property="og:image" content="https://lasuiteseoul.kr/app-icon.png">',
+        f'<meta property="og:image" content="{image_url}">',
+        1,
+    )
+    html = html.replace(
+        '<meta property="og:url" content="https://lasuiteseoul.kr/">',
+        f'<meta property="og:url" content="{page_url}">',
+        1,
+    )
+    return html
+
+
 @app.route("/api/payment/ready", methods=["POST"])
 def payment_ready():
     if not SECRET_KEY or not SECRET_KEY.isascii():
@@ -519,7 +580,44 @@ def vip_login():
 
     session["is_vip"] = True
     session["vip_name"] = matched["name"]
-    return jsonify({"ok": True, "name": matched["name"]})
+    session["vip_member_id"] = matched["id"]
+    return jsonify({
+        "ok": True,
+        "name": matched["name"],
+        "mustChangePassword": bool(matched.get("mustChangePassword")),
+    })
+
+
+@app.route("/api/vip/change-password", methods=["POST"])
+def vip_change_password():
+    if not session.get("is_vip") or not session.get("vip_member_id"):
+        return jsonify({"error": "로그인이 필요합니다."}), 401
+
+    data = request.get_json(force=True, silent=True) or {}
+    new_password = data.get("newPassword") or ""
+    if len(new_password) < 4:
+        return jsonify({"error": "비밀번호는 4자 이상 입력해 주세요."}), 400
+
+    if not GITHUB_TOKEN:
+        return jsonify({"error": "일시적인 오류입니다. 잠시 후 다시 시도해 주세요."}), 502
+
+    member_id = session["vip_member_id"]
+    try:
+        members_list, sha = github_get_members()
+        found = False
+        for m in members_list:
+            if m.get("id") == member_id:
+                m["passwordHash"] = generate_password_hash(new_password)
+                m["mustChangePassword"] = False
+                found = True
+                break
+        if not found:
+            return jsonify({"error": "회원 정보를 찾을 수 없습니다."}), 404
+        github_save_members(members_list, sha, f"VIP self password change {member_id}")
+    except Exception:
+        return jsonify({"error": "비밀번호 변경 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."}), 502
+
+    return jsonify({"ok": True})
 
 
 def _mask_username(username):
@@ -559,12 +657,24 @@ def vip_find_username():
 def vip_logout():
     session.pop("is_vip", None)
     session.pop("vip_name", None)
+    session.pop("vip_member_id", None)
     return jsonify({"ok": True})
 
 
 @app.route("/api/vip/status")
 def vip_status():
-    return jsonify({"isVip": bool(session.get("is_vip")), "name": session.get("vip_name")})
+    if not session.get("is_vip"):
+        return jsonify({"isVip": False, "name": None, "mustChangePassword": False})
+    must_change = False
+    member_id = session.get("vip_member_id")
+    if member_id and GITHUB_TOKEN:
+        try:
+            members_list, _ = github_get_members()
+            matched = next((m for m in members_list if m.get("id") == member_id), None)
+            must_change = bool(matched and matched.get("mustChangePassword"))
+        except Exception:
+            pass
+    return jsonify({"isVip": True, "name": session.get("vip_name"), "mustChangePassword": must_change})
 
 
 ADMIN_LOGIN_HTML = """
@@ -862,9 +972,9 @@ ADMIN_MEMBERS_HTML = """
               <button type="button" class="del-btn" onclick="if(confirm('정말 삭제할까요? 복구할 수 없습니다.')){fetch('/admin/members/{{ m.id }}/delete',{method:'POST'}).then(()=>location.reload());}">삭제</button>
             </div>
             {% if m.username %}
-            <form method="post" action="/admin/members/{{ m.id }}/reset-password" class="reset-pw-form" onsubmit="return confirm('비밀번호를 재설정할까요? 새 비밀번호를 회원에게 직접 안내해 주세요.');">
-              <input type="text" name="new_password" placeholder="새 비밀번호" required>
-              <button type="submit">비번 재설정</button>
+            <form method="post" action="/admin/members/{{ m.id }}/reset-password" class="reset-pw-form" onsubmit="return confirm('임시 비밀번호를 설정할까요? 회원은 다음 로그인 시 새 비밀번호로 직접 변경하게 됩니다. 이 임시 비밀번호를 회원에게 직접 안내해 주세요.');">
+              <input type="text" name="new_password" placeholder="임시 비밀번호" required>
+              <button type="submit">임시 비번 발급</button>
             </form>
             {% endif %}
           </td>
@@ -1164,6 +1274,7 @@ def admin_reset_member_password(member_id):
             for m in members_list:
                 if m.get("id") == member_id:
                     m["passwordHash"] = generate_password_hash(new_password)
+                    m["mustChangePassword"] = True
                     break
             github_save_members(members_list, sha, f"Reset VIP password {member_id}")
         except Exception:
