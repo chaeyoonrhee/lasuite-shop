@@ -72,6 +72,7 @@
     "partner_user_id": "8af1700c-90cb-4ab2-afa8-d437b723073b",
     "payment_method": "kakaopay",
     "status": "결제완료",
-    "approved_at": "2026-09-06T22:10:01"
+    "approved_at": "2026-09-06T22:10:01",
+    "fulfilled": true
   }
 ]
