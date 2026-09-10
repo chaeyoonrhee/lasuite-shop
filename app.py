@@ -779,12 +779,16 @@ ADMIN_MEMBERS_HTML = """
     {% if members %}
       <div class="summary">총 {{ members|length }}건</div>
       <table>
-        <tr><th>신청일시</th><th>이름</th><th>연락처</th><th>상태</th><th>처리</th></tr>
+        <tr><th>신청일시</th><th>이름</th><th>연락처</th><th>주문 이력</th><th>상태</th><th>처리</th></tr>
         {% for m in members %}
         <tr>
           <td>{{ m.appliedAt or '-' }}</td>
           <td>{{ m.name }}</td>
           <td>{{ m.phone }}</td>
+          <td>
+            {% if m.hasOrderHistory %}<span class="tag approved">있음</span>
+            {% else %}<span class="tag rejected">없음</span>{% endif %}
+          </td>
           <td>
             {% if m.status == 'approved' %}<span class="tag approved">VIP 승인됨</span>
             {% elif m.status == 'rejected' %}<span class="tag rejected">거절됨</span>
@@ -1025,6 +1029,19 @@ def admin_members():
         return render_template_string(ADMIN_MEMBERS_HTML, members=[])
     members_list, _ = github_get_members()
     members_list = sorted(members_list, key=lambda m: m.get("appliedAt") or "", reverse=True)
+
+    try:
+        orders_list, _ = github_get_orders()
+    except Exception:
+        orders_list = []
+    order_phones = {
+        _normalize_phone(o.get("orderer_phone") or o.get("shipping_phone") or "")
+        for o in orders_list
+    }
+    order_phones.discard("")
+    for m in members_list:
+        m["hasOrderHistory"] = _normalize_phone(m.get("phone", "")) in order_phones
+
     return render_template_string(ADMIN_MEMBERS_HTML, members=members_list)
 
 
