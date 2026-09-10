@@ -1,1 +1,11 @@
-[]
+[
+  {
+    "id": "3cf029146f7c41c3b6ab4a630ce6daf0",
+    "username": "lasuite",
+    "passwordHash": "scrypt:32768:8:1$hqcfrC4utTWRRqjV$8cd0c8c9f47522b16de3866126d334d84755973d2e35492a2aa2c5147352b63efa0b62c28f1e5405c9a7229408832da0278c6e80c7475f6299685f7579935952",
+    "name": "이채윤",
+    "phone": "01091568585",
+    "status": "pending",
+    "appliedAt": "2026-09-10T03:44:35"
+  }
+]
