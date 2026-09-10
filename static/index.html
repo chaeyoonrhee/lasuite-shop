@@ -465,28 +465,31 @@
 
     <div id="vipLoginView">
       <div class="shipping-form" style="margin-bottom:0;">
-        <input type="text" id="vipLoginName" placeholder="성함">
-        <input type="tel" id="vipLoginPhone" placeholder="연락처 (010-0000-0000)">
+        <input type="text" id="vipLoginUsername" placeholder="아이디" autocomplete="username">
+        <input type="password" id="vipLoginPassword" placeholder="비밀번호" autocomplete="current-password">
       </div>
       <button class="btn primary" id="vipLoginBtn" style="width:100%; margin-top:4px;">로그인</button>
       <div id="vipLoginMsg" style="margin-top:12px;font-size:12.5px;color:var(--ink-soft);"></div>
       <p style="margin-top:24px;font-size:12.5px;color:var(--ink-soft);text-align:center;">
-        아직 VIP가 아니신가요? <a href="#" id="vipShowApply" style="color:var(--ink);text-decoration:underline;">VIP 신청하기</a>
+        아직 VIP가 아니신가요? <a href="#" id="vipShowApply" style="color:var(--ink);text-decoration:underline;">VIP 회원가입</a>
       </p>
     </div>
 
     <div id="vipApplyView" style="display:none;">
       <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:16px;line-height:1.7;">
-        신청해 주시면 확인 후 VIP로 승인해 드립니다. 승인 완료 후 위 로그인으로 이용하실 수 있어요.
+        가입 신청해 주시면 확인 후 VIP로 승인해 드립니다. 승인 완료 후 위 아이디/비밀번호로 로그인하실 수 있어요.
       </p>
       <div class="shipping-form" style="margin-bottom:0;">
+        <input type="text" id="vipApplyUsername" placeholder="아이디 (4자 이상)" autocomplete="username">
+        <input type="password" id="vipApplyPassword" placeholder="비밀번호 (4자 이상)" autocomplete="new-password">
+        <input type="password" id="vipApplyPasswordConfirm" placeholder="비밀번호 확인" autocomplete="new-password">
         <input type="text" id="vipApplyName" placeholder="성함">
         <input type="tel" id="vipApplyPhone" placeholder="연락처 (010-0000-0000)">
       </div>
-      <button class="btn primary" id="vipApplySubmitBtn" style="width:100%; margin-top:4px;">VIP 신청하기</button>
+      <button class="btn primary" id="vipApplySubmitBtn" style="width:100%; margin-top:4px;">VIP 회원가입</button>
       <div id="vipApplyMsg" style="margin-top:12px;font-size:12.5px;color:var(--ink-soft);"></div>
       <p style="margin-top:24px;font-size:12.5px;color:var(--ink-soft);text-align:center;">
-        이미 신청하셨나요? <a href="#" id="vipShowLogin" style="color:var(--ink);text-decoration:underline;">로그인으로 돌아가기</a>
+        이미 아이디가 있으신가요? <a href="#" id="vipShowLogin" style="color:var(--ink);text-decoration:underline;">로그인으로 돌아가기</a>
       </p>
     </div>
 
@@ -887,23 +890,23 @@ document.getElementById('vipShowApply').addEventListener('click', (e) => { e.pre
 document.getElementById('vipShowLogin').addEventListener('click', (e) => { e.preventDefault(); showVipView('login'); });
 
 document.getElementById('vipLoginBtn').addEventListener('click', async () => {
-  const name = document.getElementById('vipLoginName').value.trim();
-  const phone = document.getElementById('vipLoginPhone').value.trim();
+  const username = document.getElementById('vipLoginUsername').value.trim();
+  const password = document.getElementById('vipLoginPassword').value;
   const msgEl = document.getElementById('vipLoginMsg');
-  if(!name || !phone){ msgEl.textContent = '성함과 연락처를 입력해 주세요'; return; }
+  if(!username || !password){ msgEl.textContent = '아이디와 비밀번호를 입력해 주세요'; return; }
   const btn = document.getElementById('vipLoginBtn');
   btn.disabled = true; btn.textContent = '확인 중...'; msgEl.textContent = '';
   try{
     const res = await fetch('/api/vip/login', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({name, phone})
+      body: JSON.stringify({username, password})
     });
     const data = await res.json();
     btn.disabled = false; btn.textContent = '로그인';
     if(!res.ok){ msgEl.textContent = data.error || '로그인 중 오류가 발생했습니다'; return; }
     isVip = true;
-    document.getElementById('vipNameText').textContent = data.name || name;
+    document.getElementById('vipNameText').textContent = data.name || username;
     updateVipButton();
     showVipView('logged');
     loadProducts();
@@ -915,25 +918,31 @@ document.getElementById('vipLoginBtn').addEventListener('click', async () => {
 });
 
 document.getElementById('vipApplySubmitBtn').addEventListener('click', async () => {
+  const username = document.getElementById('vipApplyUsername').value.trim();
+  const password = document.getElementById('vipApplyPassword').value;
+  const passwordConfirm = document.getElementById('vipApplyPasswordConfirm').value;
   const name = document.getElementById('vipApplyName').value.trim();
   const phone = document.getElementById('vipApplyPhone').value.trim();
   const msgEl = document.getElementById('vipApplyMsg');
-  if(!name || !phone){ msgEl.textContent = '성함과 연락처를 입력해 주세요'; return; }
+  msgEl.style.color = 'var(--ink-soft)';
+  if(!username || !password || !name || !phone){ msgEl.textContent = '아이디, 비밀번호, 성함, 연락처를 모두 입력해 주세요'; return; }
+  if(password.length < 4){ msgEl.textContent = '비밀번호는 4자 이상 입력해 주세요'; return; }
+  if(password !== passwordConfirm){ msgEl.textContent = '비밀번호가 일치하지 않습니다'; return; }
   const btn = document.getElementById('vipApplySubmitBtn');
-  btn.disabled = true; btn.textContent = '신청 중...'; msgEl.textContent = '';
+  btn.disabled = true; btn.textContent = '가입 신청 중...'; msgEl.textContent = '';
   try{
-    const res = await fetch('/api/vip/apply', {
+    const res = await fetch('/api/vip/signup', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({name, phone})
+      body: JSON.stringify({username, password, name, phone})
     });
     const data = await res.json();
-    btn.disabled = false; btn.textContent = 'VIP 신청하기';
-    if(!res.ok){ msgEl.textContent = data.error || '신청 중 오류가 발생했습니다'; return; }
+    btn.disabled = false; btn.textContent = 'VIP 회원가입';
+    if(!res.ok){ msgEl.textContent = data.error || '가입 신청 중 오류가 발생했습니다'; return; }
     msgEl.style.color = 'var(--ink)';
-    msgEl.textContent = '신청이 접수되었습니다. 승인 후 로그인해 주세요.';
+    msgEl.textContent = '가입 신청이 접수되었습니다. 승인 후 로그인해 주세요.';
   } catch(err){
-    btn.disabled = false; btn.textContent = 'VIP 신청하기';
+    btn.disabled = false; btn.textContent = 'VIP 회원가입';
     msgEl.textContent = '서버에 연결할 수 없습니다';
   }
 });
