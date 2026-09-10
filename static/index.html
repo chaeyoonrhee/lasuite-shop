@@ -352,6 +352,7 @@
       <a href="#" class="cat-link" data-cat="acc">ACC</a>
       <a href="#" class="cat-link" data-cat="shoes">SHOES</a>
       <a href="#" class="cat-link" data-cat="bag">BAG</a>
+      <a href="#" class="cat-link" data-cat="vip">VIP</a>
     </nav>
     <div class="header-icons">
       <button class="icon-btn" id="orderLookupBtn">주문조회</button>
@@ -378,6 +379,7 @@
   <button data-cat="acc">ACC</button>
   <button data-cat="shoes">SHOES</button>
   <button data-cat="bag">BAG</button>
+  <button data-cat="vip">VIP</button>
 </div>
 
 <div class="grid-wrap">
@@ -458,6 +460,10 @@
   </div>
   <div style="padding:24px 28px;">
 
+    <p id="vipIntroText" style="font-size:12.5px;color:var(--ink-soft);margin-bottom:22px;line-height:1.8;">
+      VIP는 라스윗과 오랜 시간 함께해주신 단골 고객만을 위해 마련한 공간입니다.<br>가입 신청 후 별도의 확인 절차를 거쳐 승인해 드립니다.
+    </p>
+
     <div id="vipLoggedView" style="display:none;">
       <p style="font-size:14px;color:var(--ink);margin-bottom:20px;"><span id="vipNameText"></span>님, VIP 회원입니다.</p>
       <button class="btn primary" id="vipLogoutBtn" style="width:100%;">로그아웃</button>
@@ -470,8 +476,29 @@
       </div>
       <button class="btn primary" id="vipLoginBtn" style="width:100%; margin-top:4px;">로그인</button>
       <div id="vipLoginMsg" style="margin-top:12px;font-size:12.5px;color:var(--ink-soft);"></div>
-      <p style="margin-top:24px;font-size:12.5px;color:var(--ink-soft);text-align:center;">
+      <p style="margin-top:16px;font-size:12.5px;color:var(--ink-soft);text-align:center;">
+        <a href="#" id="vipShowFind" style="color:var(--ink);text-decoration:underline;">아이디를 잊으셨나요?</a>
+      </p>
+      <p style="margin-top:4px;font-size:12.5px;color:var(--ink-soft);text-align:center;">
         아직 VIP가 아니신가요? <a href="#" id="vipShowApply" style="color:var(--ink);text-decoration:underline;">VIP 회원가입</a>
+      </p>
+    </div>
+
+    <div id="vipFindView" style="display:none;">
+      <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:16px;line-height:1.7;">
+        가입 시 입력하신 성함과 연락처로 아이디를 확인해 드립니다.
+      </p>
+      <div class="shipping-form" style="margin-bottom:0;">
+        <input type="text" id="vipFindName" placeholder="성함">
+        <input type="tel" id="vipFindPhone" placeholder="연락처 (010-0000-0000)">
+      </div>
+      <button class="btn primary" id="vipFindSubmitBtn" style="width:100%; margin-top:4px;">아이디 찾기</button>
+      <div id="vipFindMsg" style="margin-top:12px;font-size:12.5px;color:var(--ink-soft);"></div>
+      <p style="margin-top:16px;font-size:12.5px;color:var(--ink-soft);line-height:1.7;">
+        비밀번호를 잊으셨다면 사장님께 직접 문의해 주세요. (전화 010-9156-8585)
+      </p>
+      <p style="margin-top:24px;font-size:12.5px;color:var(--ink-soft);text-align:center;">
+        <a href="#" id="vipShowLoginFromFind" style="color:var(--ink);text-decoration:underline;">로그인으로 돌아가기</a>
       </p>
     </div>
 
@@ -564,10 +591,15 @@ function renderGrid(){
   grid.innerHTML = '';
   const list = products.filter(p => !p.hidden).filter(p => currentCat === 'all' || p.cat.includes(currentCat));
   if(list.length === 0){
+    const msg = currentCat === 'vip'
+      ? (isVip
+          ? 'VIP 전용 상품을 준비하고 있습니다.<br>곧 만나보실 수 있어요.'
+          : 'VIP 회원만 확인하실 수 있는 상품입니다.<br>로그인 후 확인해 주세요.')
+      : '새로운 컬렉션을 준비하고 있습니다.<br>곧 만나보실 수 있어요.';
     grid.innerHTML = `
       <div class="empty-state">
         <div class="empty-mark">LA SUITE</div>
-        <p>새로운 컬렉션을 준비하고 있습니다.<br>곧 만나보실 수 있어요.</p>
+        <p>${msg}</p>
       </div>
     `;
     return;
@@ -857,6 +889,7 @@ const vipBtn = document.getElementById('vipBtn');
 const vipLoggedView = document.getElementById('vipLoggedView');
 const vipLoginView = document.getElementById('vipLoginView');
 const vipApplyView = document.getElementById('vipApplyView');
+const vipFindView = document.getElementById('vipFindView');
 
 function updateVipButton(){
   vipBtn.textContent = isVip ? 'VIP ✓' : 'VIP';
@@ -866,6 +899,8 @@ function showVipView(view){
   vipLoggedView.style.display = view === 'logged' ? 'block' : 'none';
   vipLoginView.style.display = view === 'login' ? 'block' : 'none';
   vipApplyView.style.display = view === 'apply' ? 'block' : 'none';
+  vipFindView.style.display = view === 'find' ? 'block' : 'none';
+  document.getElementById('vipIntroText').style.display = view === 'logged' ? 'none' : 'block';
 }
 
 async function checkVipStatus(){
@@ -888,6 +923,32 @@ scrim.addEventListener('click', () => { vipDrawer.classList.remove('open'); });
 
 document.getElementById('vipShowApply').addEventListener('click', (e) => { e.preventDefault(); showVipView('apply'); });
 document.getElementById('vipShowLogin').addEventListener('click', (e) => { e.preventDefault(); showVipView('login'); });
+document.getElementById('vipShowFind').addEventListener('click', (e) => { e.preventDefault(); showVipView('find'); });
+document.getElementById('vipShowLoginFromFind').addEventListener('click', (e) => { e.preventDefault(); showVipView('login'); });
+
+document.getElementById('vipFindSubmitBtn').addEventListener('click', async () => {
+  const name = document.getElementById('vipFindName').value.trim();
+  const phone = document.getElementById('vipFindPhone').value.trim();
+  const msgEl = document.getElementById('vipFindMsg');
+  if(!name || !phone){ msgEl.textContent = '성함과 연락처를 입력해 주세요'; return; }
+  const btn = document.getElementById('vipFindSubmitBtn');
+  btn.disabled = true; btn.textContent = '확인 중...'; msgEl.textContent = '';
+  try{
+    const res = await fetch('/api/vip/find-username', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({name, phone})
+    });
+    const data = await res.json();
+    btn.disabled = false; btn.textContent = '아이디 찾기';
+    if(!res.ok){ msgEl.textContent = data.error || '확인 중 오류가 발생했습니다'; return; }
+    msgEl.style.color = 'var(--ink)';
+    msgEl.textContent = `아이디: ${data.username}`;
+  } catch(err){
+    btn.disabled = false; btn.textContent = '아이디 찾기';
+    msgEl.textContent = '서버에 연결할 수 없습니다';
+  }
+});
 
 document.getElementById('vipLoginBtn').addEventListener('click', async () => {
   const username = document.getElementById('vipLoginUsername').value.trim();
