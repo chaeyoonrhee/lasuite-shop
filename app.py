@@ -106,6 +106,25 @@ def record_order(order_record):
         pass
 
 
+GITHUB_MEMBERS_PATH = os.environ.get("GITHUB_MEMBERS_PATH", "data/members.json")
+
+
+def github_get_members():
+    return github_get_json_file(GITHUB_MEMBERS_PATH, [])
+
+
+def github_save_members(members_list, sha, message):
+    url = f"{GITHUB_API}/repos/{GITHUB_REPO}/contents/{GITHUB_MEMBERS_PATH}"
+    content_b64 = base64.b64encode(
+        json.dumps(members_list, ensure_ascii=False, indent=2).encode("utf-8")
+    ).decode("utf-8")
+    body = {"message": message, "content": content_b64, "branch": "main"}
+    if sha:
+        body["sha"] = sha
+    r = requests.put(url, json=body, headers=github_headers(), timeout=10)
+    r.raise_for_status()
+
+
 def github_get_json_file(path, default):
     """GitHub 저장소의 JSON 파일을 실시간으로 읽어온다. 배포와 무관하게 항상 최신 내용을 반환한다."""
     url = f"{GITHUB_API}/repos/{GITHUB_REPO}/contents/{path}"
@@ -166,7 +185,11 @@ def api_products():
         products, _ = github_get_json_file(GITHUB_PRODUCTS_PATH, [])
     except Exception:
         products = []
-    return jsonify([p for p in products if not p.get("hidden")])
+    is_vip = bool(session.get("is_vip"))
+    return jsonify([
+        p for p in products
+        if not p.get("hidden") and (not p.get("vipOnly") or is_vip)
+    ])
 
 
 @app.route("/api/payment/ready", methods=["POST"])
@@ -410,6 +433,91 @@ def lookup_orders():
     return jsonify({"orders": result})
 
 
+@app.route("/api/vip/apply", methods=["POST"])
+def vip_apply():
+    data = request.get_json(force=True, silent=True) or {}
+    name = (data.get("name") or "").strip()
+    phone = (data.get("phone") or "").strip()
+
+    if not name or not phone:
+        return jsonify({"error": "성함과 연락처를 모두 입력해 주세요."}), 400
+
+    if not GITHUB_TOKEN:
+        return jsonify({"error": "일시적인 오류입니다. 잠시 후 다시 시도해 주세요."}), 502
+
+    phone_norm = _normalize_phone(phone)
+    try:
+        members_list, sha = github_get_members()
+        existing = next(
+            (m for m in members_list if _normalize_phone(m.get("phone", "")) == phone_norm),
+            None,
+        )
+        if existing:
+            if existing.get("status") == "approved":
+                return jsonify({"error": "이미 VIP로 승인된 연락처입니다."}), 400
+            return jsonify({"error": "이미 신청하신 연락처입니다. 승인까지 조금만 기다려 주세요."}), 400
+
+        member_record = {
+            "id": uuid.uuid4().hex,
+            "name": name,
+            "phone": phone,
+            "status": "pending",
+            "appliedAt": datetime.utcnow().isoformat(timespec="seconds"),
+        }
+        members_list.append(member_record)
+        github_save_members(members_list, sha, f"VIP apply {name}")
+    except Exception:
+        return jsonify({"error": "신청 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."}), 502
+
+    return jsonify({"ok": True})
+
+
+@app.route("/api/vip/login", methods=["POST"])
+def vip_login():
+    data = request.get_json(force=True, silent=True) or {}
+    name = (data.get("name") or "").strip()
+    phone = (data.get("phone") or "").strip()
+
+    if not name or not phone:
+        return jsonify({"error": "성함과 연락처를 모두 입력해 주세요."}), 400
+
+    if not GITHUB_TOKEN:
+        return jsonify({"error": "일시적인 오류입니다. 잠시 후 다시 시도해 주세요."}), 502
+
+    try:
+        members_list, _ = github_get_members()
+    except Exception:
+        return jsonify({"error": "확인 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."}), 502
+
+    phone_norm = _normalize_phone(phone)
+    matched = next(
+        (m for m in members_list if m.get("name") == name and _normalize_phone(m.get("phone", "")) == phone_norm),
+        None,
+    )
+    if not matched:
+        return jsonify({"error": "일치하는 VIP 신청 내역이 없습니다. 먼저 VIP 신청을 해주세요."}), 404
+    if matched.get("status") == "rejected":
+        return jsonify({"error": "VIP 신청이 승인되지 않았습니다."}), 403
+    if matched.get("status") != "approved":
+        return jsonify({"error": "아직 승인 대기 중입니다. 승인 완료 후 이용해 주세요."}), 403
+
+    session["is_vip"] = True
+    session["vip_name"] = matched["name"]
+    return jsonify({"ok": True, "name": matched["name"]})
+
+
+@app.route("/api/vip/logout", methods=["POST"])
+def vip_logout():
+    session.pop("is_vip", None)
+    session.pop("vip_name", None)
+    return jsonify({"ok": True})
+
+
+@app.route("/api/vip/status")
+def vip_status():
+    return jsonify({"isVip": bool(session.get("is_vip")), "name": session.get("vip_name")})
+
+
 ADMIN_LOGIN_HTML = """
 <!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
 <title>LA SUITE — 관리자</title>
@@ -464,6 +572,7 @@ ADMIN_ORDERS_HTML = """
       <div class="logo">LA SUITE 주문 내역</div>
       <div style="display:flex;gap:16px;align-items:baseline;">
         <a class="logout" href="/admin/purchases">매입/수익</a>
+        <a class="logout" href="/admin/members">VIP 관리</a>
         <a class="logout" href="/admin/logout">로그아웃</a>
       </div>
     </div>
@@ -550,6 +659,7 @@ ADMIN_PURCHASES_HTML = """
       <div class="logo">LA SUITE 매입/수익</div>
       <div style="display:flex;gap:16px;align-items:baseline;">
         <a class="logout" href="/admin/orders">주문 내역</a>
+        <a class="logout" href="/admin/members">VIP 관리</a>
         <a class="logout" href="/admin/logout">로그아웃</a>
       </div>
     </div>
@@ -628,6 +738,78 @@ ADMIN_PURCHASES_HTML = """
       </table>
     {% else %}
       <div class="empty">등록된 매입 내역이 없습니다.</div>
+    {% endif %}
+  </div>
+</body></html>
+"""
+
+ADMIN_MEMBERS_HTML = """
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
+<title>LA SUITE — VIP 관리</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Pretendard:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  body{font-family:'Pretendard',sans-serif;background:#f7f4ef;color:#2b2620;margin:0;padding:40px 24px;}
+  .wrap{max-width:1000px;margin:0 auto;}
+  .head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:28px;flex-wrap:wrap;gap:12px;}
+  .logo{font-family:'Cormorant Garamond',serif;font-size:24px;letter-spacing:0.2em;}
+  a.logout{font-size:12.5px;color:#6b6459;text-decoration:none;border-bottom:1px solid #e2dbcd;}
+  table{width:100%;border-collapse:collapse;background:#fff;border:1px solid #e2dbcd;}
+  th,td{text-align:left;padding:14px 16px;font-size:13px;border-bottom:1px solid #e2dbcd;}
+  th{font-weight:500;color:#6b6459;font-size:11.5px;letter-spacing:0.05em;text-transform:uppercase;background:#efe9df;}
+  tr:last-child td{border-bottom:none;}
+  .empty{padding:80px 20px;text-align:center;color:#6b6459;font-size:14px;background:#fff;border:1px solid #e2dbcd;}
+  .summary{font-size:13px;color:#6b6459;margin-bottom:14px;}
+  .tag{display:inline-block;padding:3px 8px;font-size:11px;border-radius:3px;}
+  .tag.approved{background:#eef3ea;color:#5c8a52;}
+  .tag.pending{background:#f5eee0;color:#a9895f;}
+  .tag.rejected{background:#f5e6e2;color:#b5624a;}
+  .confirm-btn{padding:5px 10px;font-size:11px;background:#2b2620;color:#f7f4ef;border:none;cursor:pointer;}
+  .del-btn{padding:5px 10px;font-size:11px;background:#b5624a;color:#fff;border:none;cursor:pointer;margin-left:6px;}
+  .action-row{display:flex;gap:6px;}
+</style></head><body>
+  <div class="wrap">
+    <div class="head">
+      <div class="logo">LA SUITE VIP 관리</div>
+      <div style="display:flex;gap:16px;align-items:baseline;">
+        <a class="logout" href="/admin/orders">주문 내역</a>
+        <a class="logout" href="/admin/purchases">매입/수익</a>
+        <a class="logout" href="/admin/logout">로그아웃</a>
+      </div>
+    </div>
+    {% if members %}
+      <div class="summary">총 {{ members|length }}건</div>
+      <table>
+        <tr><th>신청일시</th><th>이름</th><th>연락처</th><th>상태</th><th>처리</th></tr>
+        {% for m in members %}
+        <tr>
+          <td>{{ m.appliedAt or '-' }}</td>
+          <td>{{ m.name }}</td>
+          <td>{{ m.phone }}</td>
+          <td>
+            {% if m.status == 'approved' %}<span class="tag approved">VIP 승인됨</span>
+            {% elif m.status == 'rejected' %}<span class="tag rejected">거절됨</span>
+            {% else %}<span class="tag pending">승인 대기</span>{% endif %}
+          </td>
+          <td>
+            <div class="action-row">
+              {% if m.status != 'approved' %}
+              <form method="post" action="/admin/members/{{ m.id }}/approve">
+                <button type="submit" class="confirm-btn">승인</button>
+              </form>
+              {% endif %}
+              {% if m.status != 'rejected' %}
+              <form method="post" action="/admin/members/{{ m.id }}/reject">
+                <button type="submit" class="confirm-btn" style="background:#b5624a;">거절</button>
+              </form>
+              {% endif %}
+              <button type="button" class="del-btn" onclick="if(confirm('정말 삭제할까요? 복구할 수 없습니다.')){fetch('/admin/members/{{ m.id }}/delete',{method:'POST'}).then(()=>location.reload());}">삭제</button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </table>
+    {% else %}
+      <div class="empty">아직 VIP 신청 내역이 없습니다.</div>
     {% endif %}
   </div>
 </body></html>
@@ -833,6 +1015,66 @@ def admin_delete_purchase(purchase_id):
         except Exception:
             pass
     return redirect("/admin/purchases")
+
+
+@app.route("/admin/members")
+def admin_members():
+    if not session.get("is_admin"):
+        return redirect("/admin")
+    if not GITHUB_TOKEN:
+        return render_template_string(ADMIN_MEMBERS_HTML, members=[])
+    members_list, _ = github_get_members()
+    members_list = sorted(members_list, key=lambda m: m.get("appliedAt") or "", reverse=True)
+    return render_template_string(ADMIN_MEMBERS_HTML, members=members_list)
+
+
+@app.route("/admin/members/<member_id>/approve", methods=["POST"])
+def admin_approve_member(member_id):
+    if not session.get("is_admin"):
+        return redirect("/admin")
+    if GITHUB_TOKEN:
+        try:
+            members_list, sha = github_get_members()
+            for m in members_list:
+                if m.get("id") == member_id:
+                    m["status"] = "approved"
+                    m["approvedAt"] = datetime.utcnow().isoformat(timespec="seconds")
+                    break
+            github_save_members(members_list, sha, f"Approve VIP {member_id}")
+        except Exception:
+            pass
+    return redirect("/admin/members")
+
+
+@app.route("/admin/members/<member_id>/reject", methods=["POST"])
+def admin_reject_member(member_id):
+    if not session.get("is_admin"):
+        return redirect("/admin")
+    if GITHUB_TOKEN:
+        try:
+            members_list, sha = github_get_members()
+            for m in members_list:
+                if m.get("id") == member_id:
+                    m["status"] = "rejected"
+                    break
+            github_save_members(members_list, sha, f"Reject VIP {member_id}")
+        except Exception:
+            pass
+    return redirect("/admin/members")
+
+
+@app.route("/admin/members/<member_id>/delete", methods=["POST"])
+def admin_delete_member(member_id):
+    if not session.get("is_admin"):
+        return redirect("/admin")
+    if GITHUB_TOKEN:
+        try:
+            members_list, sha = github_get_members()
+            members_list = [m for m in members_list if m.get("id") != member_id]
+            github_save_members(members_list, sha, f"Delete VIP applicant {member_id}")
+        except Exception:
+            pass
+    return redirect("/admin/members")
 
 
 @app.route("/admin/logout")
