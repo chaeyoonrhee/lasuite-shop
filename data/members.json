@@ -5,5 +5,14 @@
     "phone": "01091568585",
     "status": "pending",
     "appliedAt": "2026-09-10T02:22:08"
+  },
+  {
+    "id": "668f16c8592f4eeb8e2d83cd41586af3",
+    "username": "testvip01",
+    "passwordHash": "scrypt:32768:8:1$Z6ynD4Sc6kJl147R$8c9d1aa1348588fcf1713d77ab97ea4706413859798046ab50e187c4a5be9fa8a89a508b6cc7e40a1b10e30e03bd00d89a95b432c766ce9cf9d581acac769cdb",
+    "name": "테스트VIP2",
+    "phone": "01077778888",
+    "status": "pending",
+    "appliedAt": "2026-09-10T02:42:05"
   }
 ]
