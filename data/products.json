@@ -59,10 +59,10 @@
         "label": "카멜",
         "hex": "#b9773f",
         "images": [
-          "images/dragon-bag/ivory_1.jpg",
-          "images/dragon-bag/ivory_2.jpg",
           "images/dragon-bag/camel_1.jpg",
           "images/dragon-bag/camel_2.jpg",
+          "images/dragon-bag/ivory_1.jpg",
+          "images/dragon-bag/ivory_2.jpg",
           "images/dragon-bag/green_1.jpg",
           "images/dragon-bag/green_2.jpg",
           "images/dragon-bag/blue_1.jpg",
@@ -77,12 +77,12 @@
         "label": "연두",
         "hex": "#92a054",
         "images": [
+          "images/dragon-bag/green_1.jpg",
+          "images/dragon-bag/green_2.jpg",
           "images/dragon-bag/ivory_1.jpg",
           "images/dragon-bag/ivory_2.jpg",
           "images/dragon-bag/camel_1.jpg",
           "images/dragon-bag/camel_2.jpg",
-          "images/dragon-bag/green_1.jpg",
-          "images/dragon-bag/green_2.jpg",
           "images/dragon-bag/blue_1.jpg",
           "images/dragon-bag/black_1.jpg",
           "images/dragon-bag/black_2.jpg",
@@ -95,13 +95,13 @@
         "label": "딥블루",
         "hex": "#2b3a55",
         "images": [
+          "images/dragon-bag/blue_1.jpg",
           "images/dragon-bag/ivory_1.jpg",
           "images/dragon-bag/ivory_2.jpg",
           "images/dragon-bag/camel_1.jpg",
           "images/dragon-bag/camel_2.jpg",
           "images/dragon-bag/green_1.jpg",
           "images/dragon-bag/green_2.jpg",
-          "images/dragon-bag/blue_1.jpg",
           "images/dragon-bag/black_1.jpg",
           "images/dragon-bag/black_2.jpg",
           "images/dragon-bag/brown_1.jpg",
@@ -113,6 +113,8 @@
         "label": "블랙",
         "hex": "#1c1c1c",
         "images": [
+          "images/dragon-bag/black_1.jpg",
+          "images/dragon-bag/black_2.jpg",
           "images/dragon-bag/ivory_1.jpg",
           "images/dragon-bag/ivory_2.jpg",
           "images/dragon-bag/camel_1.jpg",
@@ -120,8 +122,6 @@
           "images/dragon-bag/green_1.jpg",
           "images/dragon-bag/green_2.jpg",
           "images/dragon-bag/blue_1.jpg",
-          "images/dragon-bag/black_1.jpg",
-          "images/dragon-bag/black_2.jpg",
           "images/dragon-bag/brown_1.jpg",
           "images/dragon-bag/brown_2.jpg"
         ]
@@ -131,6 +131,8 @@
         "label": "브라운",
         "hex": "#3f2a1d",
         "images": [
+          "images/dragon-bag/brown_1.jpg",
+          "images/dragon-bag/brown_2.jpg",
           "images/dragon-bag/ivory_1.jpg",
           "images/dragon-bag/ivory_2.jpg",
           "images/dragon-bag/camel_1.jpg",
@@ -139,9 +141,7 @@
           "images/dragon-bag/green_2.jpg",
           "images/dragon-bag/blue_1.jpg",
           "images/dragon-bag/black_1.jpg",
-          "images/dragon-bag/black_2.jpg",
-          "images/dragon-bag/brown_1.jpg",
-          "images/dragon-bag/brown_2.jpg"
+          "images/dragon-bag/black_2.jpg"
         ]
       }
     ],
@@ -261,15 +261,15 @@
         "label": "아이보리",
         "hex": "#f0ebe0",
         "images": [
-          "images/round-cardigan/group_1.jpg",
-          "images/round-cardigan/group_2.jpg",
-          "images/round-cardigan/group_3.jpg",
           "images/round-cardigan/ivory_1.jpg",
           "images/round-cardigan/ivory_2.jpg",
           "images/round-cardigan/ivory_3.jpg",
           "images/round-cardigan/ivory_4.jpg",
           "images/round-cardigan/ivory_5.jpg",
           "images/round-cardigan/ivory_6.jpg",
+          "images/round-cardigan/group_1.jpg",
+          "images/round-cardigan/group_2.jpg",
+          "images/round-cardigan/group_3.jpg",
           "images/round-cardigan/sora_1.jpg",
           "images/round-cardigan/sora_2.jpg",
           "images/round-cardigan/sora_3.jpg",
@@ -284,6 +284,10 @@
         "label": "소라",
         "hex": "#b7c4cc",
         "images": [
+          "images/round-cardigan/sora_1.jpg",
+          "images/round-cardigan/sora_2.jpg",
+          "images/round-cardigan/sora_3.jpg",
+          "images/round-cardigan/sora_4.jpg",
           "images/round-cardigan/group_1.jpg",
           "images/round-cardigan/group_2.jpg",
           "images/round-cardigan/group_3.jpg",
@@ -293,10 +297,6 @@
           "images/round-cardigan/ivory_4.jpg",
           "images/round-cardigan/ivory_5.jpg",
           "images/round-cardigan/ivory_6.jpg",
-          "images/round-cardigan/sora_1.jpg",
-          "images/round-cardigan/sora_2.jpg",
-          "images/round-cardigan/sora_3.jpg",
-          "images/round-cardigan/sora_4.jpg",
           "images/round-cardigan/mint_1.jpg",
           "images/round-cardigan/mint_2.jpg",
           "images/round-cardigan/mint_3.jpg"
@@ -307,6 +307,9 @@
         "label": "민트",
         "hex": "#c2ccc0",
         "images": [
+          "images/round-cardigan/mint_1.jpg",
+          "images/round-cardigan/mint_2.jpg",
+          "images/round-cardigan/mint_3.jpg",
           "images/round-cardigan/group_1.jpg",
           "images/round-cardigan/group_2.jpg",
           "images/round-cardigan/group_3.jpg",
@@ -319,10 +322,7 @@
           "images/round-cardigan/sora_1.jpg",
           "images/round-cardigan/sora_2.jpg",
           "images/round-cardigan/sora_3.jpg",
-          "images/round-cardigan/sora_4.jpg",
-          "images/round-cardigan/mint_1.jpg",
-          "images/round-cardigan/mint_2.jpg",
-          "images/round-cardigan/mint_3.jpg"
+          "images/round-cardigan/sora_4.jpg"
         ]
       },
       {
@@ -464,6 +464,8 @@
         "label": "그레이",
         "hex": "#9a9d9f",
         "images": [
+          "images/cha-knit-zip/gray_1.jpg",
+          "images/cha-knit-zip/gray_2.jpg",
           "images/cha-knit-zip/beige_1.jpg",
           "images/cha-knit-zip/beige_2.jpg",
           "images/cha-knit-zip/group_1.jpg",
@@ -471,9 +473,7 @@
           "images/cha-knit-zip/group_3.jpg",
           "images/cha-knit-zip/group_4.jpg",
           "images/cha-knit-zip/black_1.jpg",
-          "images/cha-knit-zip/black_2.jpg",
-          "images/cha-knit-zip/gray_1.jpg",
-          "images/cha-knit-zip/gray_2.jpg"
+          "images/cha-knit-zip/black_2.jpg"
         ]
       },
       {
@@ -515,14 +515,14 @@
         "label": "블랙",
         "hex": "#181818",
         "images": [
+          "images/cha-knit-zip/black_1.jpg",
+          "images/cha-knit-zip/black_2.jpg",
           "images/cha-knit-zip/beige_1.jpg",
           "images/cha-knit-zip/beige_2.jpg",
           "images/cha-knit-zip/group_1.jpg",
           "images/cha-knit-zip/group_2.jpg",
           "images/cha-knit-zip/group_3.jpg",
           "images/cha-knit-zip/group_4.jpg",
-          "images/cha-knit-zip/black_1.jpg",
-          "images/cha-knit-zip/black_2.jpg",
           "images/cha-knit-zip/gray_1.jpg",
           "images/cha-knit-zip/gray_2.jpg"
         ]
@@ -684,8 +684,8 @@
         "label": "브라운",
         "hex": "#281a19",
         "images": [
-          "images/park-suede-shoulder-bag/group_1.jpg",
-          "images/park-suede-shoulder-bag/brown_1.jpg"
+          "images/park-suede-shoulder-bag/brown_1.jpg",
+          "images/park-suede-shoulder-bag/group_1.jpg"
         ]
       },
       {
@@ -693,8 +693,8 @@
         "label": "코코아",
         "hex": "#211b1c",
         "images": [
-          "images/park-suede-shoulder-bag/group_1.jpg",
-          "images/park-suede-shoulder-bag/cocoa_1.jpg"
+          "images/park-suede-shoulder-bag/cocoa_1.jpg",
+          "images/park-suede-shoulder-bag/group_1.jpg"
         ]
       },
       {
@@ -702,8 +702,8 @@
         "label": "카멜",
         "hex": "#412317",
         "images": [
-          "images/park-suede-shoulder-bag/group_1.jpg",
-          "images/park-suede-shoulder-bag/camel_1.jpg"
+          "images/park-suede-shoulder-bag/camel_1.jpg",
+          "images/park-suede-shoulder-bag/group_1.jpg"
         ]
       },
       {
@@ -711,8 +711,8 @@
         "label": "청록",
         "hex": "#282e30",
         "images": [
-          "images/park-suede-shoulder-bag/group_1.jpg",
-          "images/park-suede-shoulder-bag/teal_1.jpg"
+          "images/park-suede-shoulder-bag/teal_1.jpg",
+          "images/park-suede-shoulder-bag/group_1.jpg"
         ]
       }
     ]
