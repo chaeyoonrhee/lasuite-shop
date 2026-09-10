@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LA SUITE — Women's Collection</title>
+<meta name="description" content="절제된 실루엣과 좋은 원단이 만드는 균형. LA SUITE는 과하지 않은 아름다움을 만듭니다.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="LA SUITE">
+<meta property="og:title" content="LA SUITE — 조용한 우아함, 당신의 일상이 되다">
+<meta property="og:description" content="절제된 실루엣과 좋은 원단이 만드는 균형. LA SUITE는 과하지 않은 아름다움을 만듭니다.">
+<meta property="og:image" content="https://lasuiteseoul.kr/app-icon.png">
+<meta property="og:url" content="https://lasuiteseoul.kr/">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Noto+Serif+KR:wght@300;400;500;600&family=Pretendard:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -388,8 +396,9 @@
 
 <footer>
   <div class="f-logo">LA SUITE</div>
-  <div>상호 라스윗(LA SUITE)&nbsp;·&nbsp;대표 이채윤&nbsp;·&nbsp;사업자등록번호 530-09-02254</div>
-  <div>사업장 주소 서울 용산구 대사관로12길 3&nbsp;·&nbsp;전화번호 010-9156-8585</div>
+  <div>상호 라스윗(LA SUITE)&nbsp;·&nbsp;대표 이채윤&nbsp;·&nbsp;사업자등록번호 530-09-02254&nbsp;·&nbsp;통신판매업신고번호 2023-서울용산-0473</div>
+  <div>사업장 주소 서울 용산구 대사관로12길 3&nbsp;·&nbsp;전화번호 010-9156-8585&nbsp;·&nbsp;이메일 lasuite12@naver.com</div>
+  <div style="margin-top:8px;"><a href="/privacy.html" style="color:inherit;text-decoration:underline;">개인정보처리방침</a>&nbsp;&nbsp;|&nbsp;&nbsp;<a href="/terms.html" style="color:inherit;text-decoration:underline;">이용약관</a></div>
   <div>© 2026 LA SUITE. All rights reserved.</div>
 </footer>
 
@@ -467,6 +476,18 @@
     <div id="vipLoggedView" style="display:none;">
       <p style="font-size:14px;color:var(--ink);margin-bottom:20px;"><span id="vipNameText"></span>님, VIP 회원입니다.</p>
       <button class="btn primary" id="vipLogoutBtn" style="width:100%;">로그아웃</button>
+    </div>
+
+    <div id="vipChangePwView" style="display:none;">
+      <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:16px;line-height:1.7;">
+        임시 비밀번호로 로그인하셨습니다. 계속 이용하시려면 새 비밀번호를 설정해 주세요.
+      </p>
+      <div class="shipping-form" style="margin-bottom:0;">
+        <input type="password" id="vipNewPassword" placeholder="새 비밀번호 (4자 이상)" autocomplete="new-password">
+        <input type="password" id="vipNewPasswordConfirm" placeholder="새 비밀번호 확인" autocomplete="new-password">
+      </div>
+      <button class="btn primary" id="vipChangePwSubmitBtn" style="width:100%; margin-top:4px;">비밀번호 변경</button>
+      <div id="vipChangePwMsg" style="margin-top:12px;font-size:12.5px;color:var(--ink-soft);"></div>
     </div>
 
     <div id="vipLoginView">
@@ -581,6 +602,11 @@ async function loadProducts(){
     products = [];
   }
   renderGrid();
+  const deepLink = location.pathname.match(/^\/p\/(\d+)/);
+  if(deepLink){
+    const product = products.find(p => p.id === Number(deepLink[1]));
+    if(product) openModal(product);
+  }
 }
 
 let currentCat = 'all';
@@ -669,6 +695,7 @@ function openModal(p){
       <button class="modal-close" id="modalClose">&times;</button>
       <div class="name-en">${p.en}</div>
       <h2 class="serif">${p.kr}</h2>
+      <button type="button" id="shareLinkBtn" style="background:none;border:none;padding:0;margin-bottom:10px;font-size:11.5px;color:var(--ink-soft);text-decoration:underline;cursor:pointer;">🔗 이 상품 링크 복사</button>
       <span class="price" id="modalPrice">${won(currentPrice)}</span>
       <p class="desc">${p.desc}</p>
       ${isBag ? `
@@ -713,6 +740,15 @@ function openModal(p){
   `;
   document.getElementById('overlay').classList.add('open');
   document.getElementById('modalClose').addEventListener('click', closeModal);
+  document.getElementById('shareLinkBtn').addEventListener('click', async () => {
+    const url = `${location.origin}/p/${p.id}`;
+    try{
+      await navigator.clipboard.writeText(url);
+      showToast('링크가 복사되었습니다');
+    } catch(err){
+      showToast(url);
+    }
+  });
 
   if(isBag){
     const mainImg = document.getElementById('modalMainImg');
@@ -890,6 +926,8 @@ const vipLoggedView = document.getElementById('vipLoggedView');
 const vipLoginView = document.getElementById('vipLoginView');
 const vipApplyView = document.getElementById('vipApplyView');
 const vipFindView = document.getElementById('vipFindView');
+const vipChangePwView = document.getElementById('vipChangePwView');
+let vipMustChangePassword = false;
 
 function updateVipButton(){
   vipBtn.textContent = isVip ? 'VIP ✓' : 'VIP';
@@ -900,7 +938,8 @@ function showVipView(view){
   vipLoginView.style.display = view === 'login' ? 'block' : 'none';
   vipApplyView.style.display = view === 'apply' ? 'block' : 'none';
   vipFindView.style.display = view === 'find' ? 'block' : 'none';
-  document.getElementById('vipIntroText').style.display = view === 'logged' ? 'none' : 'block';
+  vipChangePwView.style.display = view === 'changepw' ? 'block' : 'none';
+  document.getElementById('vipIntroText').style.display = (view === 'logged' || view === 'changepw') ? 'none' : 'block';
 }
 
 async function checkVipStatus(){
@@ -908,6 +947,7 @@ async function checkVipStatus(){
     const res = await fetch('/api/vip/status');
     const data = await res.json();
     isVip = !!data.isVip;
+    vipMustChangePassword = !!data.mustChangePassword;
     if(isVip){ document.getElementById('vipNameText').textContent = data.name || ''; }
     updateVipButton();
   } catch(err){ /* ignore */ }
@@ -915,7 +955,7 @@ async function checkVipStatus(){
 checkVipStatus();
 
 vipBtn.addEventListener('click', () => {
-  showVipView(isVip ? 'logged' : 'login');
+  showVipView(vipMustChangePassword ? 'changepw' : (isVip ? 'logged' : 'login'));
   vipDrawer.classList.add('open'); scrim.classList.add('open');
 });
 document.getElementById('vipClose').addEventListener('click', () => { vipDrawer.classList.remove('open'); scrim.classList.remove('open'); });
@@ -967,13 +1007,47 @@ document.getElementById('vipLoginBtn').addEventListener('click', async () => {
     btn.disabled = false; btn.textContent = '로그인';
     if(!res.ok){ msgEl.textContent = data.error || '로그인 중 오류가 발생했습니다'; return; }
     isVip = true;
+    vipMustChangePassword = !!data.mustChangePassword;
     document.getElementById('vipNameText').textContent = data.name || username;
     updateVipButton();
-    showVipView('logged');
     loadProducts();
-    showToast('VIP로 로그인되었습니다');
+    if(vipMustChangePassword){
+      showVipView('changepw');
+      showToast('임시 비밀번호로 로그인되었습니다. 새 비밀번호를 설정해 주세요');
+    } else {
+      showVipView('logged');
+      showToast('VIP로 로그인되었습니다');
+    }
   } catch(err){
     btn.disabled = false; btn.textContent = '로그인';
+    msgEl.textContent = '서버에 연결할 수 없습니다';
+  }
+});
+
+document.getElementById('vipChangePwSubmitBtn').addEventListener('click', async () => {
+  const newPassword = document.getElementById('vipNewPassword').value;
+  const newPasswordConfirm = document.getElementById('vipNewPasswordConfirm').value;
+  const msgEl = document.getElementById('vipChangePwMsg');
+  msgEl.style.color = 'var(--ink-soft)';
+  if(!newPassword){ msgEl.textContent = '새 비밀번호를 입력해 주세요'; return; }
+  if(newPassword.length < 4){ msgEl.textContent = '비밀번호는 4자 이상 입력해 주세요'; return; }
+  if(newPassword !== newPasswordConfirm){ msgEl.textContent = '비밀번호가 일치하지 않습니다'; return; }
+  const btn = document.getElementById('vipChangePwSubmitBtn');
+  btn.disabled = true; btn.textContent = '변경 중...'; msgEl.textContent = '';
+  try{
+    const res = await fetch('/api/vip/change-password', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({newPassword})
+    });
+    const data = await res.json();
+    btn.disabled = false; btn.textContent = '비밀번호 변경';
+    if(!res.ok){ msgEl.textContent = data.error || '변경 중 오류가 발생했습니다'; return; }
+    vipMustChangePassword = false;
+    showVipView('logged');
+    showToast('비밀번호가 변경되었습니다');
+  } catch(err){
+    btn.disabled = false; btn.textContent = '비밀번호 변경';
     msgEl.textContent = '서버에 연결할 수 없습니다';
   }
 });
