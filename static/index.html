@@ -616,7 +616,11 @@ let cart = [];
 function renderGrid(){
   const grid = document.getElementById('productGrid');
   grid.innerHTML = '';
-  const list = products.filter(p => !p.hidden).filter(p => currentCat === 'all' || p.cat.includes(currentCat));
+  const list = products.filter(p => !p.hidden).filter(p => {
+    if(currentCat === 'all') return true;
+    if(currentCat === 'vip') return !!p.vipOnly;
+    return p.cat.includes(currentCat);
+  });
   if(list.length === 0){
     const msg = currentCat === 'vip'
       ? (isVip
