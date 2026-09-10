@@ -522,6 +522,39 @@ def vip_login():
     return jsonify({"ok": True, "name": matched["name"]})
 
 
+def _mask_username(username):
+    if len(username) <= 3:
+        return username[0] + "*" * (len(username) - 1)
+    return username[:2] + "*" * (len(username) - 3) + username[-1]
+
+
+@app.route("/api/vip/find-username", methods=["POST"])
+def vip_find_username():
+    data = request.get_json(force=True, silent=True) or {}
+    name = (data.get("name") or "").strip()
+    phone = (data.get("phone") or "").strip()
+
+    if not name or not phone:
+        return jsonify({"error": "성함과 연락처를 모두 입력해 주세요."}), 400
+    if not GITHUB_TOKEN:
+        return jsonify({"error": "일시적인 오류입니다. 잠시 후 다시 시도해 주세요."}), 502
+
+    try:
+        members_list, _ = github_get_members()
+    except Exception:
+        return jsonify({"error": "확인 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."}), 502
+
+    phone_norm = _normalize_phone(phone)
+    matched = next(
+        (m for m in members_list if m.get("name") == name and _normalize_phone(m.get("phone", "")) == phone_norm),
+        None,
+    )
+    if not matched or not matched.get("username"):
+        return jsonify({"error": "일치하는 가입 내역이 없습니다."}), 404
+
+    return jsonify({"ok": True, "username": _mask_username(matched["username"])})
+
+
 @app.route("/api/vip/logout", methods=["POST"])
 def vip_logout():
     session.pop("is_vip", None)
@@ -782,6 +815,9 @@ ADMIN_MEMBERS_HTML = """
   .confirm-btn{padding:5px 10px;font-size:11px;background:#2b2620;color:#f7f4ef;border:none;cursor:pointer;}
   .del-btn{padding:5px 10px;font-size:11px;background:#b5624a;color:#fff;border:none;cursor:pointer;margin-left:6px;}
   .action-row{display:flex;gap:6px;}
+  .reset-pw-form{display:flex;gap:4px;margin-top:6px;}
+  .reset-pw-form input{width:110px;padding:5px 6px;font-size:11px;border:1px solid #e2dbcd;font-family:inherit;}
+  .reset-pw-form button{padding:5px 8px;font-size:11px;background:#6b6459;color:#f7f4ef;border:none;cursor:pointer;}
 </style></head><body>
   <div class="wrap">
     <div class="head">
@@ -825,6 +861,12 @@ ADMIN_MEMBERS_HTML = """
               {% endif %}
               <button type="button" class="del-btn" onclick="if(confirm('정말 삭제할까요? 복구할 수 없습니다.')){fetch('/admin/members/{{ m.id }}/delete',{method:'POST'}).then(()=>location.reload());}">삭제</button>
             </div>
+            {% if m.username %}
+            <form method="post" action="/admin/members/{{ m.id }}/reset-password" class="reset-pw-form" onsubmit="return confirm('비밀번호를 재설정할까요? 새 비밀번호를 회원에게 직접 안내해 주세요.');">
+              <input type="text" name="new_password" placeholder="새 비밀번호" required>
+              <button type="submit">비번 재설정</button>
+            </form>
+            {% endif %}
           </td>
         </tr>
         {% endfor %}
@@ -1106,6 +1148,24 @@ def admin_delete_member(member_id):
             members_list, sha = github_get_members()
             members_list = [m for m in members_list if m.get("id") != member_id]
             github_save_members(members_list, sha, f"Delete VIP applicant {member_id}")
+        except Exception:
+            pass
+    return redirect("/admin/members")
+
+
+@app.route("/admin/members/<member_id>/reset-password", methods=["POST"])
+def admin_reset_member_password(member_id):
+    if not session.get("is_admin"):
+        return redirect("/admin")
+    new_password = (request.form.get("new_password") or "").strip()
+    if GITHUB_TOKEN and new_password:
+        try:
+            members_list, sha = github_get_members()
+            for m in members_list:
+                if m.get("id") == member_id:
+                    m["passwordHash"] = generate_password_hash(new_password)
+                    break
+            github_save_members(members_list, sha, f"Reset VIP password {member_id}")
         except Exception:
             pass
     return redirect("/admin/members")
