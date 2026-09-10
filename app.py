@@ -580,10 +580,12 @@ def vip_login():
 
     session["is_vip"] = True
     session["vip_name"] = matched["name"]
+    session["vip_phone"] = matched.get("phone")
     session["vip_member_id"] = matched["id"]
     return jsonify({
         "ok": True,
         "name": matched["name"],
+        "phone": matched.get("phone"),
         "mustChangePassword": bool(matched.get("mustChangePassword")),
     })
 
@@ -657,6 +659,7 @@ def vip_find_username():
 def vip_logout():
     session.pop("is_vip", None)
     session.pop("vip_name", None)
+    session.pop("vip_phone", None)
     session.pop("vip_member_id", None)
     return jsonify({"ok": True})
 
@@ -664,7 +667,7 @@ def vip_logout():
 @app.route("/api/vip/status")
 def vip_status():
     if not session.get("is_vip"):
-        return jsonify({"isVip": False, "name": None, "mustChangePassword": False})
+        return jsonify({"isVip": False, "name": None, "phone": None, "mustChangePassword": False})
     must_change = False
     member_id = session.get("vip_member_id")
     if member_id and GITHUB_TOKEN:
@@ -674,7 +677,12 @@ def vip_status():
             must_change = bool(matched and matched.get("mustChangePassword"))
         except Exception:
             pass
-    return jsonify({"isVip": True, "name": session.get("vip_name"), "mustChangePassword": must_change})
+    return jsonify({
+        "isVip": True,
+        "name": session.get("vip_name"),
+        "phone": session.get("vip_phone"),
+        "mustChangePassword": must_change,
+    })
 
 
 ADMIN_LOGIN_HTML = """
