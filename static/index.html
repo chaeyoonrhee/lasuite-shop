@@ -454,11 +454,14 @@
     <button class="modal-close" id="lookupClose">&times;</button>
   </div>
   <div style="padding:24px 28px;">
-    <div class="shipping-form" style="margin-bottom:0;">
-      <input type="text" id="lookupName" placeholder="주문자 성함">
-      <input type="tel" id="lookupPhone" placeholder="연락처 (010-0000-0000)">
+    <div id="lookupVipNotice" style="display:none;font-size:12.5px;color:var(--ink-soft);margin-bottom:16px;"></div>
+    <div id="lookupFormWrap">
+      <div class="shipping-form" style="margin-bottom:0;">
+        <input type="text" id="lookupName" placeholder="주문자 성함">
+        <input type="tel" id="lookupPhone" placeholder="연락처 (010-0000-0000)">
+      </div>
+      <button class="btn primary" id="lookupSubmitBtn" style="width:100%; margin-top:4px;">조회하기</button>
     </div>
-    <button class="btn primary" id="lookupSubmitBtn" style="width:100%; margin-top:4px;">조회하기</button>
     <div id="lookupResults" style="margin-top:24px;"></div>
   </div>
 </div>
@@ -611,7 +614,16 @@ async function loadProducts(){
 }
 
 let currentCat = 'all';
-let cart = [];
+function loadCart(){
+  try{
+    const raw = localStorage.getItem('lasuite_cart');
+    return raw ? JSON.parse(raw) : [];
+  } catch(e){ return []; }
+}
+function saveCart(){
+  try{ localStorage.setItem('lasuite_cart', JSON.stringify(cart)); } catch(e){ /* ignore */ }
+}
+let cart = loadCart();
 
 function renderGrid(){
   const grid = document.getElementById('productGrid');
@@ -631,8 +643,15 @@ function renderGrid(){
       <div class="empty-state">
         <div class="empty-mark">LA SUITE</div>
         <p>${msg}</p>
+        ${(currentCat === 'vip' && !isVip) ? '<button class="btn primary" id="vipGoBtn" style="margin-top:20px;">VIP 로그인 / 회원가입</button>' : ''}
       </div>
     `;
+    if(currentCat === 'vip' && !isVip){
+      document.getElementById('vipGoBtn').addEventListener('click', () => {
+        showVipView(vipMustChangePassword ? 'changepw' : 'login');
+        vipDrawer.classList.add('open'); scrim.classList.add('open');
+      });
+    }
     return;
   }
   list.forEach(p => {
@@ -843,6 +862,7 @@ function closeModal(){ document.getElementById('overlay').classList.remove('open
 document.getElementById('overlay').addEventListener('click', e => { if(e.target.id === 'overlay') closeModal(); });
 
 function renderCart(){
+  saveCart();
   document.getElementById('cartCount').textContent = cart.reduce((s,i) => s+i.qty, 0);
   const wrap = document.getElementById('cartItems');
   if(cart.length === 0){
@@ -872,19 +892,39 @@ function renderCart(){
 
 const cartDrawer = document.getElementById('cartDrawer');
 const scrim = document.getElementById('scrim');
-document.getElementById('cartBtn').addEventListener('click', () => { cartDrawer.classList.add('open'); scrim.classList.add('open'); });
+document.getElementById('cartBtn').addEventListener('click', () => {
+  cartDrawer.classList.add('open'); scrim.classList.add('open');
+  if(isVip){
+    const nameInput = document.getElementById('ordererName');
+    const phoneInput = document.getElementById('ordererPhone');
+    if(!nameInput.value.trim() && vipName) nameInput.value = vipName;
+    if(!phoneInput.value.trim() && vipPhone) phoneInput.value = vipPhone;
+  }
+});
 document.getElementById('cartClose').addEventListener('click', closeCart);
 scrim.addEventListener('click', closeCart);
 function closeCart(){ cartDrawer.classList.remove('open'); scrim.classList.remove('open'); }
 
 const lookupDrawer = document.getElementById('lookupDrawer');
-document.getElementById('orderLookupBtn').addEventListener('click', () => { lookupDrawer.classList.add('open'); scrim.classList.add('open'); });
+document.getElementById('orderLookupBtn').addEventListener('click', () => {
+  lookupDrawer.classList.add('open'); scrim.classList.add('open');
+  const formWrap = document.getElementById('lookupFormWrap');
+  const vipNotice = document.getElementById('lookupVipNotice');
+  document.getElementById('lookupResults').innerHTML = '';
+  if(isVip && vipName && vipPhone){
+    formWrap.style.display = 'none';
+    vipNotice.style.display = 'block';
+    vipNotice.textContent = `${vipName}님의 주문 내역을 불러옵니다.`;
+    performOrderLookup(vipName, vipPhone);
+  } else {
+    formWrap.style.display = '';
+    vipNotice.style.display = 'none';
+  }
+});
 document.getElementById('lookupClose').addEventListener('click', () => { lookupDrawer.classList.remove('open'); scrim.classList.remove('open'); });
 scrim.addEventListener('click', () => { lookupDrawer.classList.remove('open'); });
 
-document.getElementById('lookupSubmitBtn').addEventListener('click', async () => {
-  const name = document.getElementById('lookupName').value.trim();
-  const phone = document.getElementById('lookupPhone').value.trim();
+async function performOrderLookup(name, phone){
   const resultsEl = document.getElementById('lookupResults');
   if(!name || !phone){ showToast('성함과 연락처를 입력해 주세요'); return; }
 
@@ -922,9 +962,14 @@ document.getElementById('lookupSubmitBtn').addEventListener('click', async () =>
     btn.textContent = '조회하기';
     resultsEl.innerHTML = '<div class="cart-empty">서버에 연결할 수 없습니다</div>';
   }
+}
+document.getElementById('lookupSubmitBtn').addEventListener('click', () => {
+  performOrderLookup(document.getElementById('lookupName').value.trim(), document.getElementById('lookupPhone').value.trim());
 });
 
 let isVip = false;
+let vipName = null;
+let vipPhone = null;
 const vipDrawer = document.getElementById('vipDrawer');
 const vipBtn = document.getElementById('vipBtn');
 const vipLoggedView = document.getElementById('vipLoggedView');
@@ -953,6 +998,8 @@ async function checkVipStatus(){
     const data = await res.json();
     isVip = !!data.isVip;
     vipMustChangePassword = !!data.mustChangePassword;
+    vipName = data.name || null;
+    vipPhone = data.phone || null;
     if(isVip){ document.getElementById('vipNameText').textContent = data.name || ''; }
     updateVipButton();
   } catch(err){ /* ignore */ }
@@ -1013,6 +1060,8 @@ document.getElementById('vipLoginBtn').addEventListener('click', async () => {
     if(!res.ok){ msgEl.textContent = data.error || '로그인 중 오류가 발생했습니다'; return; }
     isVip = true;
     vipMustChangePassword = !!data.mustChangePassword;
+    vipName = data.name || username;
+    vipPhone = data.phone || null;
     document.getElementById('vipNameText').textContent = data.name || username;
     updateVipButton();
     loadProducts();
@@ -1090,6 +1139,8 @@ document.getElementById('vipApplySubmitBtn').addEventListener('click', async () 
 document.getElementById('vipLogoutBtn').addEventListener('click', async () => {
   try{ await fetch('/api/vip/logout', {method: 'POST'}); } catch(err){ /* ignore */ }
   isVip = false;
+  vipName = null;
+  vipPhone = null;
   updateVipButton();
   showVipView('login');
   vipDrawer.classList.remove('open'); scrim.classList.remove('open');
