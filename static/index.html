@@ -694,10 +694,12 @@ let selectedQty = 1;
 let selectedColorIdx = 0;
 let selectedImageIdx = 0;
 let selectedSizeOptIdx = 0;
+let selectedPlainSize = null;
 let currentPrice = 0;
 
 function openModal(p){
   selectedSize = null;
+  selectedPlainSize = null;
   selectedQty = 1;
   selectedColorIdx = 0;
   selectedImageIdx = 0;
@@ -732,7 +734,12 @@ function openModal(p){
           <div class="size-opt-row" id="sizeOptRow">
             ${p.sizeOptions.map((s,i) => `<button class="size-opt-btn ${i===0?'selected':''}" data-idx="${i}">${s.label}<span class="sp">${won(s.price)}</span></button>`).join('')}
           </div>
-        ` : ''}
+        ` : (p.sizes ? `
+          <div class="option-label">SIZE</div>
+          <div class="size-row" id="plainSizeRow">
+            ${p.sizes.map(s => `<button class="size-btn" data-size="${s}">${s}</button>`).join('')}
+          </div>
+        ` : '')}
       ` : `
         <div class="option-label">SIZE</div>
         <div class="size-row" id="sizeRow">
@@ -794,9 +801,13 @@ function openModal(p){
     renderThumbs();
 
     function updateSelectedLabel(){
-      selectedSize = p.sizeOptions
-        ? `${p.colors[selectedColorIdx].label} / ${p.sizeOptions[selectedSizeOptIdx].label}`
-        : p.colors[selectedColorIdx].label;
+      if(p.sizeOptions){
+        selectedSize = `${p.colors[selectedColorIdx].label} / ${p.sizeOptions[selectedSizeOptIdx].label}`;
+      } else if(p.sizes){
+        selectedSize = selectedPlainSize ? `${p.colors[selectedColorIdx].label} / ${selectedPlainSize}` : null;
+      } else {
+        selectedSize = p.colors[selectedColorIdx].label;
+      }
     }
 
     document.querySelectorAll('#colorRow .color-swatch').forEach(b => {
@@ -827,6 +838,15 @@ function openModal(p){
           subtotal.textContent = won(currentPrice*selectedQty);
         });
       });
+    } else if(p.sizes){
+      document.querySelectorAll('#plainSizeRow .size-btn').forEach(b => {
+        b.addEventListener('click', () => {
+          document.querySelectorAll('#plainSizeRow .size-btn').forEach(x => x.classList.remove('selected'));
+          b.classList.add('selected');
+          selectedPlainSize = b.dataset.size;
+          updateSelectedLabel();
+        });
+      });
     }
 
     updateSelectedLabel();
@@ -849,7 +869,7 @@ function openModal(p){
     selectedQty++; qtyVal.textContent = selectedQty; subtotal.textContent = won(currentPrice*selectedQty);
   });
   document.getElementById('addToCartBtn')?.addEventListener('click', () => {
-    if(!selectedSize){ showToast(isBag ? '색상을 선택해 주세요' : '사이즈를 선택해 주세요'); return; }
+    if(!selectedSize){ showToast((isBag && p.sizes) ? '사이즈를 선택해 주세요' : (isBag ? '색상을 선택해 주세요' : '사이즈를 선택해 주세요')); return; }
     const thumb = isBag ? p.colors[selectedColorIdx].images[0] : null;
     cart.push({...p, size: selectedSize, qty: selectedQty, thumb, price: currentPrice});
     renderCart();
