@@ -19,6 +19,14 @@ SECRET_KEY = os.environ.get("KAKAOPAY_SECRET_KEY")
 BASE_URL = os.environ.get("BASE_URL", "http://localhost:5000")
 KAKAO_API = "https://open-api.kakaopay.com/online/v1/payment"
 
+# 네이버페이(결제형) 연동 준비 중 — 가맹점 심사 승인 후 clientId/clientSecret/파트너ID를
+# 발급받으면 채워 넣는다. NAVERPAY_ENABLED가 "true"가 아니면 사장님이 최종 확인하기 전까지
+# 절대 결제 수단으로 노출되거나 동작하지 않는다. (요청: 모든게 확정되기 전까지는 활성화 금지)
+NAVERPAY_ENABLED = os.environ.get("NAVERPAY_ENABLED", "false").lower() == "true"
+NAVERPAY_PARTNER_ID = os.environ.get("NAVERPAY_PARTNER_ID")
+NAVERPAY_CLIENT_ID = os.environ.get("NAVERPAY_CLIENT_ID")
+NAVERPAY_CLIENT_SECRET = os.environ.get("NAVERPAY_CLIENT_SECRET")
+
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
 
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
@@ -382,6 +390,24 @@ def payment_approve():
     record_order(order_record)
     notify_telegram(order_record)
     return redirect(f"/payment-result.html?status=success&order={partner_order_id}&amount={order['total_amount']}")
+
+
+@app.route("/api/naverpay/status")
+def naverpay_status():
+    """프론트엔드가 네이버페이 버튼을 보여줘도 되는지 확인할 때 쓴다.
+    NAVERPAY_ENABLED가 true이고 자격증명이 모두 설정된 경우에만 available=True.
+    가맹점 심사 승인 전까지는 항상 False — 사장님이 직접 활성화하기 전에는 켜지지 않는다."""
+    available = bool(NAVERPAY_ENABLED and NAVERPAY_PARTNER_ID and NAVERPAY_CLIENT_ID and NAVERPAY_CLIENT_SECRET)
+    return jsonify({"available": available})
+
+
+@app.route("/api/naverpay/ready", methods=["POST"])
+def naverpay_ready():
+    # TODO: 네이버페이 가맹점 심사 승인 후 파트너센터에서 제공하는 정식 API 문서를 보고
+    # reserve/apply 요청·응답 필드명과 인증 헤더 형식을 확정한 뒤 카카오페이 payment_ready()와
+    # 동일한 패턴(주문 검증 → orders[]에 임시 저장 → 결제창 리다이렉트 URL 반환)으로 구현한다.
+    # 지금은 정확한 스펙을 확인할 수 없어 추측으로 구현하지 않았다.
+    return jsonify({"error": "네이버페이는 아직 준비 중입니다."}), 503
 
 
 @app.route("/api/orders/<order_id>")
