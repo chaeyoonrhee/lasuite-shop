@@ -13,6 +13,7 @@
 <meta property="og:image" content="https://lasuiteseoul.kr/app-icon.png">
 <meta property="og:url" content="https://lasuiteseoul.kr/">
 <meta name="twitter:card" content="summary_large_image">
+<script src="https://wcs.naver.net/wcslog.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Noto+Serif+KR:wght@300;400;500;600&family=Pretendard:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -434,7 +435,6 @@
     <div class="option-label">결제 수단</div>
     <div class="pay-method-row" id="payMethodRow">
       <button type="button" class="pay-method-btn" data-method="kakao">카카오페이</button>
-      <button type="button" class="pay-method-btn" data-method="naver" id="naverPayMethodBtn" style="display:none;">네이버페이</button>
       <button type="button" class="pay-method-btn selected" data-method="bank">무통장입금</button>
     </div>
     <div class="pay-method-note" id="payMethodNote" style="display:none;"></div>
@@ -759,6 +759,7 @@ function openModal(p){
       <div class="btn-row">
         <button class="btn primary" id="addToCartBtn" ${p.soldout ? 'disabled' : ''}>${p.soldout ? '품절' : '장바구니 담기'}</button>
       </div>
+      <div id="naverPayButtonBox" style="margin-top:10px;"></div>
       ${isBag ? `
         <div class="info-accordion">
           <div class="info-block"><b>소재</b><p>${p.material}</p></div>
@@ -877,6 +878,41 @@ function openModal(p){
     closeModal();
     showToast(`${p.kr}(${selectedSize}) 장바구니에 담았습니다`);
   });
+
+  if(naverPayConfig && !p.soldout){
+    const box = document.getElementById('naverPayButtonBox');
+    box.innerHTML = `
+      <button type="button" class="btn" id="naverPayBuyBtn" style="width:100%;border-color:#03c75a;color:#03c75a;">N Pay 구매하기</button>
+    `;
+    document.getElementById('naverPayBuyBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('naverPayBuyBtn');
+      const original = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = '네이버페이 연결 중...';
+      try{
+        const res = await fetch('/api/naverpay/order-register', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({productId: p.id, qty: selectedQty})
+        });
+        const data = await res.json();
+        if(!res.ok){
+          showToast(data.error || '네이버페이 주문 준비 중 오류가 발생했습니다');
+          btn.disabled = false; btn.textContent = original;
+          return;
+        }
+        if(data.isMobile){
+          location.href = data.orderFormUrl;
+        } else {
+          window.open(data.orderFormUrl, '', 'scrollbars=yes,width=500,height=700');
+          btn.disabled = false; btn.textContent = original;
+        }
+      } catch(err){
+        showToast('서버에 연결할 수 없습니다');
+        btn.disabled = false; btn.textContent = original;
+      }
+    });
+  }
 }
 
 function closeModal(){ document.getElementById('overlay').classList.remove('open'); }
@@ -1214,25 +1250,20 @@ if(!KAKAO_PAYMENT_ENABLED){
   note.style.display = 'block';
 }
 
-// 네이버페이는 서버(NAVERPAY_ENABLED)가 준비 완료로 켜주기 전까지 버튼 자체가 보이지 않는다.
-let naverPayConfigured = false;
+// 네이버페이(주문형)는 서버(NAVERPAY_ENABLED)가 준비 완료로 켜주기 전까지 상품 상세의
+// "네이버페이 구매하기" 버튼 자체가 나타나지 않는다.
+let naverPayConfig = null;
+
 fetch('/api/naverpay/status').then(r => r.json()).then(data => {
-  if(data.available){
-    naverPayConfigured = true;
-    document.getElementById('naverPayMethodBtn').style.display = '';
+  if(!data.available) return;
+  naverPayConfig = data;
+  if(data.commonScriptId){
+    if(!window.wcs_add) window.wcs_add = {};
+    window.wcs_add['wa'] = data.commonScriptId;
+    if(window.wcs && window.wcs.inflow) window.wcs.inflow(location.hostname.replace(/^.*(\w+\.\w+)$/, '$1'));
+    window.addEventListener('load', () => { if(window.wcs_do) window.wcs_do(); });
   }
 }).catch(() => {});
-
-function loadNaverPaySdk(){
-  return new Promise((resolve, reject) => {
-    if(window.Naver && window.Naver.Pay){ resolve(); return; }
-    const script = document.createElement('script');
-    script.src = 'https://nsp.pay.naver.com/sdk/js/naverpay.min.js';
-    script.onload = resolve;
-    script.onerror = reject;
-    document.head.appendChild(script);
-  });
-}
 
 document.querySelectorAll('.pay-method-btn').forEach(b => {
   b.addEventListener('click', () => {
@@ -1247,10 +1278,6 @@ document.querySelectorAll('.pay-method-btn').forEach(b => {
       bankInfo.style.display = 'block';
       checkoutBtn.textContent = '무통장입금 주문하기';
       payNote.innerHTML = '주문 후 입금 확인되면 배송이 시작됩니다';
-    } else if(payMethod === 'naver'){
-      bankInfo.style.display = 'none';
-      checkoutBtn.textContent = '네이버페이로 결제하기';
-      payNote.innerHTML = '네이버페이 간편결제로 안전하게 결제됩니다';
     } else {
       bankInfo.style.display = 'none';
       checkoutBtn.textContent = '카카오페이로 결제하기';
@@ -1322,46 +1349,6 @@ async function handleCheckout(){
         return;
       }
       window.location.href = `/payment-result.html?status=bank&order=${data.orderId}&amount=${data.totalAmount}`;
-    } catch(err){
-      showToast('서버에 연결할 수 없습니다');
-      btn.disabled = false; btn.textContent = originalText;
-    }
-    return;
-  }
-
-  if(payMethod === 'naver'){
-    if(!naverPayConfigured){ showToast('네이버페이는 아직 준비 중입니다'); return; }
-    btn.disabled = true;
-    btn.textContent = '네이버페이 연결 중...';
-    try{
-      const res = await fetch('/api/naverpay/ready', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({items, shippingFee, orderer, shipping, partnerUserId: getPartnerUserId()})
-      });
-      const data = await res.json();
-      if(!res.ok){
-        showToast(data.error || '결제 준비 중 오류가 발생했습니다');
-        btn.disabled = false; btn.textContent = originalText;
-        return;
-      }
-      await loadNaverPaySdk();
-      const oPay = Naver.Pay.create({
-        mode: data.mode,
-        clientId: data.clientId,
-        payType: 'normal',
-        openType: 'page',
-      });
-      oPay.open({
-        merchantPayKey: data.merchantPayKey,
-        productName: data.productName,
-        totalPayAmount: data.totalPayAmount,
-        taxScopeAmount: data.taxScopeAmount,
-        taxExScopeAmount: data.taxExScopeAmount,
-        productCount: data.productCount,
-        returnUrl: data.returnUrl,
-      });
-      btn.disabled = false; btn.textContent = originalText;
     } catch(err){
       showToast('서버에 연결할 수 없습니다');
       btn.disabled = false; btn.textContent = originalText;
