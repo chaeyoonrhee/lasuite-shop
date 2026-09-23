@@ -19,13 +19,22 @@ SECRET_KEY = os.environ.get("KAKAOPAY_SECRET_KEY")
 BASE_URL = os.environ.get("BASE_URL", "http://localhost:5000")
 KAKAO_API = "https://open-api.kakaopay.com/online/v1/payment"
 
-# 네이버페이(결제형) 연동 준비 중 — 가맹점 심사 승인 후 clientId/clientSecret/파트너ID를
-# 발급받으면 채워 넣는다. NAVERPAY_ENABLED가 "true"가 아니면 사장님이 최종 확인하기 전까지
+# 네이버페이(결제형) 연동. NAVERPAY_ENABLED가 "true"가 아니면 사장님이 최종 확인하기 전까지
 # 절대 결제 수단으로 노출되거나 동작하지 않는다. (요청: 모든게 확정되기 전까지는 활성화 금지)
+# 네이버페이센터 발급 키 매핑 (공식 가이드 "인증정보 및 인증방법" + 상점 어드민 연동 사례 기준):
+#   페이센터ID    -> NAVERPAY_PARTNER_ID     (API 요청 URL 경로에 사용, 가이드의 "파트너 ID")
+#   가맹점 인증키  -> NAVERPAY_CLIENT_SECRET  (서버 간 통신용 비밀키, X-Naver-Client-Secret 헤더)
+#   버튼 인증키   -> NAVERPAY_CLIENT_ID      (결제 버튼 SDK 초기화용, X-Naver-Client-Id 헤더)
+#   네이버공통인증키는 결제 API와 무관한 별도의 유입경로 추적 스크립트용 ID라 여기서는 쓰지 않는다.
+# 그룹 가맹점만 발급되는 Chain ID는 개인/법인 단독 가맹점인 LA SUITE에는 해당 없음.
 NAVERPAY_ENABLED = os.environ.get("NAVERPAY_ENABLED", "false").lower() == "true"
+# "development"(테스트, dev.apis.naver.com + test-pay.naver.com)만 검수 전에 써야 한다.
+# 네이버페이 자체 기술 검수(체크리스트 제출 후 평균 15영업일)를 통과하기 전까지는 절대 production으로 바꾸지 말 것.
+NAVERPAY_MODE = os.environ.get("NAVERPAY_MODE", "development")
 NAVERPAY_PARTNER_ID = os.environ.get("NAVERPAY_PARTNER_ID")
 NAVERPAY_CLIENT_ID = os.environ.get("NAVERPAY_CLIENT_ID")
 NAVERPAY_CLIENT_SECRET = os.environ.get("NAVERPAY_CLIENT_SECRET")
+NAVERPAY_API_HOST = "dev.apis.naver.com" if NAVERPAY_MODE != "production" else "apis.naver.com"
 
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
 
@@ -48,6 +57,18 @@ def kakao_headers():
         "Authorization": f"SECRET_KEY {SECRET_KEY}",
         "Content-Type": "application/json",
     }
+
+
+def naverpay_headers():
+    return {
+        "X-Naver-Client-Id": NAVERPAY_CLIENT_ID,
+        "X-Naver-Client-Secret": NAVERPAY_CLIENT_SECRET,
+        "Content-Type": "application/json",
+    }
+
+
+def naverpay_api(path):
+    return f"https://{NAVERPAY_API_HOST}/{NAVERPAY_PARTNER_ID}/naverpay/payments/{path}"
 
 
 def github_headers():
@@ -403,11 +424,119 @@ def naverpay_status():
 
 @app.route("/api/naverpay/ready", methods=["POST"])
 def naverpay_ready():
-    # TODO: 네이버페이 가맹점 심사 승인 후 파트너센터에서 제공하는 정식 API 문서를 보고
-    # reserve/apply 요청·응답 필드명과 인증 헤더 형식을 확정한 뒤 카카오페이 payment_ready()와
-    # 동일한 패턴(주문 검증 → orders[]에 임시 저장 → 결제창 리다이렉트 URL 반환)으로 구현한다.
-    # 지금은 정확한 스펙을 확인할 수 없어 추측으로 구현하지 않았다.
-    return jsonify({"error": "네이버페이는 아직 준비 중입니다."}), 503
+    if not NAVERPAY_ENABLED:
+        return jsonify({"error": "네이버페이는 아직 준비 중입니다."}), 503
+    if not (NAVERPAY_PARTNER_ID and NAVERPAY_CLIENT_ID and NAVERPAY_CLIENT_SECRET):
+        return jsonify({"error": "네이버페이 인증정보가 설정되지 않았습니다."}), 500
+
+    data = request.get_json(force=True, silent=True) or {}
+    items = data.get("items") or []
+    partner_user_id = data.get("partnerUserId") or "guest"
+    orderer = data.get("orderer") or {}
+    orderer_name = (orderer.get("name") or "").strip()
+    orderer_phone = (orderer.get("phone") or "").strip()
+    shipping = data.get("shipping") or {}
+    shipping_name = (shipping.get("name") or "").strip()
+    shipping_phone = (shipping.get("phone") or "").strip()
+    shipping_address = (shipping.get("address") or "").strip()
+
+    if not items:
+        return jsonify({"error": "장바구니가 비어 있습니다."}), 400
+
+    if not orderer_name or not orderer_phone:
+        return jsonify({"error": "주문자 성함과 연락처를 입력해 주세요."}), 400
+
+    if not shipping_name or not shipping_phone or not shipping_address:
+        return jsonify({"error": "받는 분 성함, 연락처, 배송지 주소를 모두 입력해 주세요."}), 400
+
+    try:
+        shipping_fee = int(data.get("shippingFee") or 0)
+        total_amount = sum(int(i["price"]) * int(i["qty"]) for i in items) + shipping_fee
+        quantity = sum(int(i["qty"]) for i in items)
+    except (KeyError, TypeError, ValueError):
+        return jsonify({"error": "장바구니 항목 형식이 올바르지 않습니다."}), 400
+
+    if total_amount <= 0:
+        return jsonify({"error": "결제 금액이 올바르지 않습니다."}), 400
+
+    item_name = items[0]["kr"] if len(items) == 1 else f'{items[0]["kr"]} 외 {len(items) - 1}건'
+    merchant_pay_key = uuid.uuid4().hex
+
+    orders[merchant_pay_key] = {
+        "pg": "naverpay",
+        "items": items,
+        "total_amount": total_amount,
+        "shipping_fee": shipping_fee,
+        "orderer_name": orderer_name,
+        "orderer_phone": orderer_phone,
+        "shipping_name": shipping_name,
+        "shipping_phone": shipping_phone,
+        "shipping_address": shipping_address,
+        "partner_user_id": partner_user_id,
+        "status": "READY",
+    }
+
+    # 카카오페이와 달리 결제창 호출은 서버가 아니라 브라우저의 NAVER Pay JS SDK가 담당한다.
+    # 여기서는 프론트엔드가 oPay.open()을 호출할 때 필요한 값만 돌려준다.
+    return jsonify({
+        "mode": NAVERPAY_MODE,
+        "clientId": NAVERPAY_CLIENT_ID,
+        "merchantPayKey": merchant_pay_key,
+        "productName": item_name,
+        "totalPayAmount": total_amount,
+        "taxScopeAmount": total_amount,
+        "taxExScopeAmount": 0,
+        "productCount": quantity,
+        "returnUrl": f"{BASE_URL}/api/naverpay/approve?merchantPayKey={merchant_pay_key}",
+    })
+
+
+@app.route("/api/naverpay/approve")
+def naverpay_approve():
+    if not NAVERPAY_ENABLED:
+        return redirect("/payment-result.html?status=fail")
+
+    merchant_pay_key = request.args.get("merchantPayKey")
+    result_code = request.args.get("resultCode")
+    payment_id = request.args.get("paymentId")
+    order = orders.get(merchant_pay_key)
+
+    if not order or result_code != "Success" or not payment_id:
+        if order:
+            order["status"] = "FAILED"
+        return redirect("/payment-result.html?status=fail")
+
+    body = {"paymentId": payment_id}
+    try:
+        r = requests.post(naverpay_api("v2.2/apply/payment"), json=body, headers=naverpay_headers(), timeout=10)
+        result = r.json()
+    except Exception:
+        order["status"] = "FAILED"
+        return redirect("/payment-result.html?status=fail")
+
+    if result.get("code") != "Success":
+        order["status"] = "FAILED"
+        return redirect("/payment-result.html?status=fail")
+
+    order["status"] = "APPROVED"
+    order_record = {
+        "partner_order_id": merchant_pay_key,
+        "items": order["items"],
+        "total_amount": order["total_amount"],
+        "shipping_fee": order.get("shipping_fee", 0),
+        "orderer_name": order.get("orderer_name", ""),
+        "orderer_phone": order.get("orderer_phone", ""),
+        "shipping_name": order.get("shipping_name", ""),
+        "shipping_phone": order.get("shipping_phone", ""),
+        "shipping_address": order.get("shipping_address", ""),
+        "partner_user_id": order["partner_user_id"],
+        "payment_method": "naverpay",
+        "status": "결제완료",
+        "approved_at": datetime.utcnow().isoformat(timespec="seconds"),
+    }
+    record_order(order_record)
+    notify_telegram(order_record)
+    return redirect(f"/payment-result.html?status=success&order={merchant_pay_key}&amount={order['total_amount']}")
 
 
 @app.route("/api/orders/<order_id>")
