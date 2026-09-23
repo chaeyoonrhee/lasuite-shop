@@ -1,12 +1,14 @@
 import base64
 import json
 import os
+import re
 import uuid
+import xml.etree.ElementTree as ET
 from datetime import datetime
 
 import requests
 from dotenv import load_dotenv
-from flask import Flask, jsonify, redirect, render_template_string, request, send_from_directory, session
+from flask import Flask, Response, jsonify, redirect, render_template_string, request, send_from_directory, session
 from werkzeug.security import check_password_hash, generate_password_hash
 
 load_dotenv()
@@ -19,22 +21,24 @@ SECRET_KEY = os.environ.get("KAKAOPAY_SECRET_KEY")
 BASE_URL = os.environ.get("BASE_URL", "http://localhost:5000")
 KAKAO_API = "https://open-api.kakaopay.com/online/v1/payment"
 
-# 네이버페이(결제형) 연동. NAVERPAY_ENABLED가 "true"가 아니면 사장님이 최종 확인하기 전까지
-# 절대 결제 수단으로 노출되거나 동작하지 않는다. (요청: 모든게 확정되기 전까지는 활성화 금지)
-# 네이버페이센터 발급 키 매핑 (공식 가이드 "인증정보 및 인증방법" + 상점 어드민 연동 사례 기준):
-#   페이센터ID    -> NAVERPAY_PARTNER_ID     (API 요청 URL 경로에 사용, 가이드의 "파트너 ID")
-#   가맹점 인증키  -> NAVERPAY_CLIENT_SECRET  (서버 간 통신용 비밀키, X-Naver-Client-Secret 헤더)
-#   버튼 인증키   -> NAVERPAY_CLIENT_ID      (결제 버튼 SDK 초기화용, X-Naver-Client-Id 헤더)
-#   네이버공통인증키는 결제 API와 무관한 별도의 유입경로 추적 스크립트용 ID라 여기서는 쓰지 않는다.
-# 그룹 가맹점만 발급되는 Chain ID는 개인/법인 단독 가맹점인 LA SUITE에는 해당 없음.
+# 네이버페이(주문형) 연동 — LA SUITE는 "결제형"이 아니라 "주문형"으로 승인받았다 (2026-09-23 확인).
+# 주문형은 상품상세페이지에 별도 "네이버페이 구매하기" 버튼이 뜨고, 장바구니를 거치지 않고
+# 네이버 자체 화면에서 배송지 입력~결제까지 끝나는 방식이라 카카오페이와는 흐름이 아예 다르다.
+# NAVERPAY_ENABLED가 "true"가 아니면 사장님이 최종 확인하기 전까지 절대 버튼이 노출되거나
+# 동작하지 않는다. (요청: 모든게 확정되기 전까지는 활성화 금지)
+# 네이버페이센터 승인 메일에 명시된 키 매핑:
+#   페이센터ID(계정ID)  -> NAVERPAY_PARTNER_ID     (가맹점번호, 주문 등록/주문서 URL에 사용)
+#   가맹점 인증키        -> NAVERPAY_CLIENT_SECRET  (certiKey, 주문 등록 XML에 포함되는 서버측 비밀값)
+#   버튼 인증키          -> NAVERPAY_CLIENT_ID      (BUTTON_KEY, 버튼 스크립트/주문서 URL에 쓰이는 공개 키)
+#   네이버공통인증키      -> NAVERPAY_COMMON_SCRIPT_ID (결제 API와 무관, 사이트 전체 유입경로 추적 스크립트용)
 NAVERPAY_ENABLED = os.environ.get("NAVERPAY_ENABLED", "false").lower() == "true"
-# "development"(테스트, dev.apis.naver.com + test-pay.naver.com)만 검수 전에 써야 한다.
+# "development"(테스트, test-*.pay.naver.com)만 검수 전에 써야 한다.
 # 네이버페이 자체 기술 검수(체크리스트 제출 후 평균 15영업일)를 통과하기 전까지는 절대 production으로 바꾸지 말 것.
 NAVERPAY_MODE = os.environ.get("NAVERPAY_MODE", "development")
 NAVERPAY_PARTNER_ID = os.environ.get("NAVERPAY_PARTNER_ID")
 NAVERPAY_CLIENT_ID = os.environ.get("NAVERPAY_CLIENT_ID")
 NAVERPAY_CLIENT_SECRET = os.environ.get("NAVERPAY_CLIENT_SECRET")
-NAVERPAY_API_HOST = "dev.apis.naver.com" if NAVERPAY_MODE != "production" else "apis.naver.com"
+NAVERPAY_COMMON_SCRIPT_ID = os.environ.get("NAVERPAY_COMMON_SCRIPT_ID")
 
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
 
@@ -57,18 +61,6 @@ def kakao_headers():
         "Authorization": f"SECRET_KEY {SECRET_KEY}",
         "Content-Type": "application/json",
     }
-
-
-def naverpay_headers():
-    return {
-        "X-Naver-Client-Id": NAVERPAY_CLIENT_ID,
-        "X-Naver-Client-Secret": NAVERPAY_CLIENT_SECRET,
-        "Content-Type": "application/json",
-    }
-
-
-def naverpay_api(path):
-    return f"https://{NAVERPAY_API_HOST}/{NAVERPAY_PARTNER_ID}/naverpay/payments/{path}"
 
 
 def github_headers():
@@ -415,128 +407,195 @@ def payment_approve():
 
 @app.route("/api/naverpay/status")
 def naverpay_status():
-    """프론트엔드가 네이버페이 버튼을 보여줘도 되는지 확인할 때 쓴다.
+    """프론트엔드가 상품상세 페이지에 네이버페이/찜 버튼을 그려도 되는지, 그리고
+    버튼 스크립트 초기화에 필요한 값들을 확인할 때 쓴다.
     NAVERPAY_ENABLED가 true이고 자격증명이 모두 설정된 경우에만 available=True.
     가맹점 심사 승인 전까지는 항상 False — 사장님이 직접 활성화하기 전에는 켜지지 않는다."""
     available = bool(NAVERPAY_ENABLED and NAVERPAY_PARTNER_ID and NAVERPAY_CLIENT_ID and NAVERPAY_CLIENT_SECRET)
-    return jsonify({"available": available})
+    return jsonify({
+        "available": available,
+        "mode": NAVERPAY_MODE,
+        "buttonKey": NAVERPAY_CLIENT_ID if available else None,
+        "partnerId": NAVERPAY_PARTNER_ID if available else None,
+        "commonScriptId": NAVERPAY_COMMON_SCRIPT_ID,
+    })
 
 
-@app.route("/api/naverpay/ready", methods=["POST"])
-def naverpay_ready():
+def _naverpay_domains():
+    """개발(dev)/운영(production) 환경별 도메인. 검수 통과 전에는 절대 production을 쓰지 않는다."""
+    prefix = "" if NAVERPAY_MODE == "production" else "test-"
+    return {
+        "register": f"https://{prefix}api.pay.naver.com/o/customer/api/order/v20/register",
+        "order_pc": f"https://{prefix}order.pay.naver.com/customer/buy",
+        "order_mobile": f"https://{prefix}m.pay.naver.com/o/customer/buy",
+    }
+
+
+def _naverpay_xml_escape(value):
+    return (str(value) if value is not None else "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+@app.route("/naverpay/product-info")
+def naverpay_product_info():
+    """네이버페이가 비주기적으로 상품 정보(가격/재고/판매상태)를 확인하러 호출하는 엔드포인트.
+    요청 형식: ?product[0][id]=1111&product[1][id]=2222"""
+    try:
+        products, _ = github_get_json_file(GITHUB_PRODUCTS_PATH, [])
+    except Exception:
+        products = []
+
+    ids = []
+    for key, value in request.args.items():
+        if re.match(r"product\[\d+\]\[id\]$", key):
+            ids.append(value)
+
+    parts = ['<?xml version="1.0" encoding="utf-8"?>', "<products>"]
+    for pid_str in ids:
+        try:
+            pid = int(pid_str)
+        except (TypeError, ValueError):
+            continue
+        product = next((p for p in products if p.get("id") == pid), None)
+        if not product:
+            continue
+        thumb = product["colors"][0]["images"][0] if product.get("colors") else ""
+        image_url = _abs_url(thumb) if thumb else ""
+        info_url = _abs_url(f"p/{pid}")
+        shipping_fee = int(product.get("shippingFee") or 0)
+        name = _naverpay_xml_escape(product.get("kr", ""))
+        parts.append(f"""<product>
+    <id>{pid}</id>
+    <ecMallProductId>{pid}</ecMallProductId>
+    <name><![CDATA[{name}]]></name>
+    <basePrice>{int(product.get("price", 0))}</basePrice>
+    <taxType>TAX</taxType>
+    <infoUrl><![CDATA[{info_url}]]></infoUrl>
+    <imageUrl><![CDATA[{image_url}]]></imageUrl>
+    <status>{"SOLD_OUT" if product.get("soldout") else "ON_SALE"}</status>
+    <stockQuantity>{0 if product.get("soldout") else 999}</stockQuantity>
+    <supplementSupport>false</supplementSupport>
+    <optionSupport>false</optionSupport>
+    <returnShippingFee>{shipping_fee * 2}</returnShippingFee>
+    <exchangeShippingFee>{shipping_fee * 2}</exchangeShippingFee>
+    <returnInfo>
+        <address1><![CDATA[서울 용산구 대사관로12길 3]]></address1>
+        <sellername><![CDATA[라스윗(LA SUITE)]]></sellername>
+        <contact1>01091568585</contact1>
+        <contact2>01091568585</contact2>
+    </returnInfo>
+    <shippingPolicy>
+        <groupId>1</groupId>
+        <method>DELIVERY</method>
+        <feeType>{"FREE" if shipping_fee == 0 else "CONDITIONAL_FREE"}</feeType>
+        <feePayType>PREPAYED</feePayType>
+        <feePrice>{shipping_fee}</feePrice>
+        <conditionalFree>
+            <basePrice>999999999</basePrice>
+        </conditionalFree>
+    </shippingPolicy>
+</product>""")
+    parts.append("</products>")
+    return Response("".join(parts), mimetype="application/xml")
+
+
+@app.route("/api/naverpay/order-register", methods=["POST"])
+def naverpay_order_register():
     if not NAVERPAY_ENABLED:
         return jsonify({"error": "네이버페이는 아직 준비 중입니다."}), 503
     if not (NAVERPAY_PARTNER_ID and NAVERPAY_CLIENT_ID and NAVERPAY_CLIENT_SECRET):
         return jsonify({"error": "네이버페이 인증정보가 설정되지 않았습니다."}), 500
 
     data = request.get_json(force=True, silent=True) or {}
-    items = data.get("items") or []
-    partner_user_id = data.get("partnerUserId") or "guest"
-    orderer = data.get("orderer") or {}
-    orderer_name = (orderer.get("name") or "").strip()
-    orderer_phone = (orderer.get("phone") or "").strip()
-    shipping = data.get("shipping") or {}
-    shipping_name = (shipping.get("name") or "").strip()
-    shipping_phone = (shipping.get("phone") or "").strip()
-    shipping_address = (shipping.get("address") or "").strip()
-
-    if not items:
-        return jsonify({"error": "장바구니가 비어 있습니다."}), 400
-
-    if not orderer_name or not orderer_phone:
-        return jsonify({"error": "주문자 성함과 연락처를 입력해 주세요."}), 400
-
-    if not shipping_name or not shipping_phone or not shipping_address:
-        return jsonify({"error": "받는 분 성함, 연락처, 배송지 주소를 모두 입력해 주세요."}), 400
+    try:
+        product_id = int(data.get("productId"))
+    except (TypeError, ValueError):
+        return jsonify({"error": "상품 정보가 올바르지 않습니다."}), 400
+    qty = max(1, int(data.get("qty") or 1))
 
     try:
-        shipping_fee = int(data.get("shippingFee") or 0)
-        total_amount = sum(int(i["price"]) * int(i["qty"]) for i in items) + shipping_fee
-        quantity = sum(int(i["qty"]) for i in items)
-    except (KeyError, TypeError, ValueError):
-        return jsonify({"error": "장바구니 항목 형식이 올바르지 않습니다."}), 400
-
-    if total_amount <= 0:
-        return jsonify({"error": "결제 금액이 올바르지 않습니다."}), 400
-
-    item_name = items[0]["kr"] if len(items) == 1 else f'{items[0]["kr"]} 외 {len(items) - 1}건'
-    merchant_pay_key = uuid.uuid4().hex
-
-    orders[merchant_pay_key] = {
-        "pg": "naverpay",
-        "items": items,
-        "total_amount": total_amount,
-        "shipping_fee": shipping_fee,
-        "orderer_name": orderer_name,
-        "orderer_phone": orderer_phone,
-        "shipping_name": shipping_name,
-        "shipping_phone": shipping_phone,
-        "shipping_address": shipping_address,
-        "partner_user_id": partner_user_id,
-        "status": "READY",
-    }
-
-    # 카카오페이와 달리 결제창 호출은 서버가 아니라 브라우저의 NAVER Pay JS SDK가 담당한다.
-    # 여기서는 프론트엔드가 oPay.open()을 호출할 때 필요한 값만 돌려준다.
-    return jsonify({
-        "mode": NAVERPAY_MODE,
-        "clientId": NAVERPAY_CLIENT_ID,
-        "merchantPayKey": merchant_pay_key,
-        "productName": item_name,
-        "totalPayAmount": total_amount,
-        "taxScopeAmount": total_amount,
-        "taxExScopeAmount": 0,
-        "productCount": quantity,
-        "returnUrl": f"{BASE_URL}/api/naverpay/approve?merchantPayKey={merchant_pay_key}",
-    })
-
-
-@app.route("/api/naverpay/approve")
-def naverpay_approve():
-    if not NAVERPAY_ENABLED:
-        return redirect("/payment-result.html?status=fail")
-
-    merchant_pay_key = request.args.get("merchantPayKey")
-    result_code = request.args.get("resultCode")
-    payment_id = request.args.get("paymentId")
-    order = orders.get(merchant_pay_key)
-
-    if not order or result_code != "Success" or not payment_id:
-        if order:
-            order["status"] = "FAILED"
-        return redirect("/payment-result.html?status=fail")
-
-    body = {"paymentId": payment_id}
-    try:
-        r = requests.post(naverpay_api("v2.2/apply/payment"), json=body, headers=naverpay_headers(), timeout=10)
-        result = r.json()
+        products, _ = github_get_json_file(GITHUB_PRODUCTS_PATH, [])
     except Exception:
-        order["status"] = "FAILED"
-        return redirect("/payment-result.html?status=fail")
+        return jsonify({"error": "상품 정보를 불러오지 못했습니다."}), 502
 
-    if result.get("code") != "Success":
-        order["status"] = "FAILED"
-        return redirect("/payment-result.html?status=fail")
+    product = next((p for p in products if p.get("id") == product_id), None)
+    if not product or product.get("hidden") or product.get("soldout"):
+        return jsonify({"error": "구매할 수 없는 상품입니다."}), 400
 
-    order["status"] = "APPROVED"
-    order_record = {
-        "partner_order_id": merchant_pay_key,
-        "items": order["items"],
-        "total_amount": order["total_amount"],
-        "shipping_fee": order.get("shipping_fee", 0),
-        "orderer_name": order.get("orderer_name", ""),
-        "orderer_phone": order.get("orderer_phone", ""),
-        "shipping_name": order.get("shipping_name", ""),
-        "shipping_phone": order.get("shipping_phone", ""),
-        "shipping_address": order.get("shipping_address", ""),
-        "partner_user_id": order["partner_user_id"],
-        "payment_method": "naverpay",
-        "status": "결제완료",
-        "approved_at": datetime.utcnow().isoformat(timespec="seconds"),
-    }
-    record_order(order_record)
-    notify_telegram(order_record)
-    return redirect(f"/payment-result.html?status=success&order={merchant_pay_key}&amount={order['total_amount']}")
+    thumb = product["colors"][0]["images"][0] if product.get("colors") else ""
+    image_url = _abs_url(thumb) if thumb else ""
+    info_url = _abs_url(f"p/{product_id}")
+    shipping_fee = int(product.get("shippingFee") or 0)
+    name = _naverpay_xml_escape(product.get("kr", ""))
+
+    xml_body = f"""<order>
+    <merchantId>{_naverpay_xml_escape(NAVERPAY_PARTNER_ID)}</merchantId>
+    <certiKey>{_naverpay_xml_escape(NAVERPAY_CLIENT_SECRET)}</certiKey>
+    <product>
+        <id>{product_id}</id>
+        <ecMallProductId>{product_id}</ecMallProductId>
+        <name><![CDATA[{name}]]></name>
+        <basePrice>{int(product.get("price", 0))}</basePrice>
+        <taxType>TAX</taxType>
+        <infoUrl><![CDATA[{info_url}]]></infoUrl>
+        <imageUrl><![CDATA[{image_url}]]></imageUrl>
+        <single>
+            <quantity>{qty}</quantity>
+        </single>
+        <shippingPolicy>
+            <groupId>1</groupId>
+            <method>DELIVERY</method>
+            <feeType>{"FREE" if shipping_fee == 0 else "CONDITIONAL_FREE"}</feeType>
+            <feePayType>PREPAYED</feePayType>
+            <feePrice>{shipping_fee}</feePrice>
+            <conditionalFree>
+                <basePrice>999999999</basePrice>
+            </conditionalFree>
+        </shippingPolicy>
+    </product>
+    <backUrl><![CDATA[{info_url}]]></backUrl>
+    <interface>
+        <cpaInflowCode>{_naverpay_xml_escape(request.cookies.get("CPAValidator", ""))}</cpaInflowCode>
+        <naverInflowCode>{_naverpay_xml_escape(request.cookies.get("NA_CO", ""))}</naverInflowCode>
+        <saClickId>{_naverpay_xml_escape(request.cookies.get("NVADID", ""))}</saClickId>
+    </interface>
+</order>"""
+
+    domains = _naverpay_domains()
+    try:
+        r = requests.post(
+            domains["register"],
+            data=xml_body.encode("utf-8"),
+            headers={"Content-Type": "application/xml; charset=utf-8"},
+            timeout=10,
+        )
+    except Exception:
+        return jsonify({"error": "네이버페이 서버와 통신 중 오류가 발생했습니다."}), 502
+
+    # NOTE: 이 API의 정확한 응답 스키마는 공식 문서에 명시돼 있지 않아 아래는 최선 추정이다.
+    # NAVERPAY_MODE=development로 실제 호출해보고 태그명이 다르면 이 파싱 로직을 수정해야 한다.
+    order_id = None
+    try:
+        root = ET.fromstring(r.text)
+        candidates = [root] + list(root.iter())
+        for el in candidates:
+            tag = el.tag.split("}")[-1].lower()
+            if tag in ("orderid", "order_id") and (el.text or "").strip():
+                order_id = el.text.strip()
+                break
+    except ET.ParseError:
+        pass
+
+    if not order_id:
+        error_payload = {"error": "주문 등록에 실패했습니다."}
+        if NAVERPAY_MODE != "production":
+            error_payload["raw"] = r.text[:1000]
+        return jsonify(error_payload), 502
+
+    is_mobile = bool(re.search(r"Mobile|iPhone|Android", request.headers.get("User-Agent") or ""))
+    base = domains["order_mobile"] if is_mobile else domains["order_pc"]
+    order_form_url = f"{base}/{NAVERPAY_CLIENT_ID}/{NAVERPAY_PARTNER_ID}?orderId={order_id}"
+
+    return jsonify({"orderFormUrl": order_form_url, "isMobile": is_mobile})
 
 
 @app.route("/api/orders/<order_id>")
