@@ -74,5 +74,39 @@
     "status": "결제완료",
     "approved_at": "2026-09-06T22:10:01",
     "fulfilled": true
+  },
+  {
+    "partner_order_id": "10cdbb737a974af09b820d5bfcf41198",
+    "items": [
+      {
+        "kr": "레이스 레이어드 가디건",
+        "price": 25000,
+        "qty": 1,
+        "size": "그레이"
+      },
+      {
+        "kr": "샤 니트 반집업",
+        "price": 36500,
+        "qty": 1,
+        "size": "그레이"
+      },
+      {
+        "kr": "소가죽 포켓 볼링백",
+        "price": 79900,
+        "qty": 1,
+        "size": "아이보리"
+      }
+    ],
+    "total_amount": 144900,
+    "shipping_fee": 3500,
+    "orderer_name": "김소영",
+    "orderer_phone": "01071424104",
+    "shipping_name": "김소영",
+    "shipping_phone": "01071424104",
+    "shipping_address": "서울 성동구 왕십리로 16, 101-2802",
+    "partner_user_id": "437169a1-4b7d-44d0-a947-3bfc077df0ef",
+    "payment_method": "kakaopay",
+    "status": "결제완료",
+    "approved_at": "2026-09-29T00:05:11"
   }
 ]
