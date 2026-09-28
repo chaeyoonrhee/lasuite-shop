@@ -527,8 +527,10 @@ def naverpay_order_register():
     shipping_fee = int(product.get("shippingFee") or 0)
     name = _naverpay_xml_escape(product.get("kr", ""))
 
+    # NOTE: merchantId는 우리 가맹점ID가 아니라 공식 가이드 샘플에 나온 고정 리터럴 값이다.
+    # 실제 가맹점 식별은 certiKey(가맹점 인증키)로 이루어지는 것으로 보인다 (2026-09-28 실측 확인).
     xml_body = f"""<order>
-    <merchantId>{_naverpay_xml_escape(NAVERPAY_PARTNER_ID)}</merchantId>
+    <merchantId>naver_pay</merchantId>
     <certiKey>{_naverpay_xml_escape(NAVERPAY_CLIENT_SECRET)}</certiKey>
     <product>
         <id>{product_id}</id>
