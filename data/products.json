@@ -894,6 +894,7 @@
     "price": 25000,
     "shippingFee": 3500,
     "cat": [
+      "top",
       "outer"
     ],
     "material": "가디건: 아크릴 50%, 폴리 50% / 레이스 이너: 폴리 100%",
