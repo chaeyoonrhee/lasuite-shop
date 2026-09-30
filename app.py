@@ -540,33 +540,42 @@ def naverpay_order_register():
         return jsonify({"error": "네이버페이 인증정보가 설정되지 않았습니다."}), 500
 
     data = request.get_json(force=True, silent=True) or {}
-    try:
-        product_id = int(data.get("productId"))
-    except (TypeError, ValueError):
-        return jsonify({"error": "상품 정보가 올바르지 않습니다."}), 400
-    qty = max(1, int(data.get("qty") or 1))
+    cart_items = data.get("items") or []
+    if not cart_items:
+        return jsonify({"error": "장바구니가 비어 있습니다."}), 400
 
     try:
         products, _ = github_get_json_file(GITHUB_PRODUCTS_PATH, [])
     except Exception:
         return jsonify({"error": "상품 정보를 불러오지 못했습니다."}), 502
 
-    product = next((p for p in products if p.get("id") == product_id), None)
-    if not product or product.get("hidden") or product.get("soldout"):
-        return jsonify({"error": "구매할 수 없는 상품입니다."}), 400
+    resolved = []
+    for item in cart_items:
+        try:
+            product_id = int(item.get("productId"))
+        except (TypeError, ValueError, AttributeError):
+            return jsonify({"error": "상품 정보가 올바르지 않습니다."}), 400
+        qty = max(1, int(item.get("qty") or 1))
+        product = next((p for p in products if p.get("id") == product_id), None)
+        if not product or product.get("hidden") or product.get("soldout"):
+            return jsonify({"error": "구매할 수 없는 상품이 포함되어 있습니다."}), 400
+        resolved.append((product_id, qty, product))
 
-    thumb = product["colors"][0]["images"][0] if product.get("colors") else ""
-    image_url = _abs_url(thumb) if thumb else ""
-    info_url = _abs_url(f"p/{product_id}")
-    shipping_fee = int(product.get("shippingFee") or 0)
-    name = _naverpay_xml_escape(product.get("kr", ""))
+    back_url = _abs_url("/")
 
     # NOTE: merchantId는 우리 가맹점ID가 아니라 공식 가이드 샘플에 나온 고정 리터럴 값이다.
     # 실제 가맹점 식별은 certiKey(가맹점 인증키)로 이루어지는 것으로 보인다 (2026-09-28 실측 확인).
-    xml_body = f"""<order>
-    <merchantId>naver_pay</merchantId>
-    <certiKey>{_naverpay_xml_escape(NAVERPAY_CLIENT_SECRET)}</certiKey>
-    <product>
+    # NOTE: 장바구니(여러 상품) 주문 등록의 정확한 XML 스키마는 공식 문서에 없어서, 공식 샘플의
+    # 단일상품 <product> 블록을 상품 개수만큼 반복하는 방식으로 최선 추정 구현했다.
+    # 실제 네이버 테스트 응답을 받아본 뒤 스키마가 다르면 이 부분을 수정해야 한다.
+    product_blocks = []
+    for product_id, qty, product in resolved:
+        thumb = product["colors"][0]["images"][0] if product.get("colors") else ""
+        image_url = _abs_url(thumb) if thumb else ""
+        info_url = _abs_url(f"p/{product_id}")
+        shipping_fee = int(product.get("shippingFee") or 0)
+        name = _naverpay_xml_escape(product.get("kr", ""))
+        product_blocks.append(f"""<product>
         <id>{product_id}</id>
         <ecMallProductId>{product_id}</ecMallProductId>
         <name><![CDATA[{name}]]></name>
@@ -587,8 +596,13 @@ def naverpay_order_register():
                 <basePrice>999999999</basePrice>
             </conditionalFree>
         </shippingPolicy>
-    </product>
-    <backUrl><![CDATA[{info_url}]]></backUrl>
+    </product>""")
+
+    xml_body = f"""<order>
+    <merchantId>naver_pay</merchantId>
+    <certiKey>{_naverpay_xml_escape(NAVERPAY_CLIENT_SECRET)}</certiKey>
+    {"".join(product_blocks)}
+    <backUrl><![CDATA[{back_url}]]></backUrl>
     <interface>
         <cpaInflowCode>{_naverpay_xml_escape(request.cookies.get("CPAValidator", ""))}</cpaInflowCode>
         <naverInflowCode>{_naverpay_xml_escape(request.cookies.get("NA_CO", ""))}</naverInflowCode>
