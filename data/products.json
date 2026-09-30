@@ -979,18 +979,6 @@
     "returnNotice": "본 상품은 1:1 주문 오더 상품으로, 불량 이외 단순 변심에 의한 교환/환불이 불가합니다. 주문 후 집화(발송) 완료 후 취소하시면 왕복 배송비가 부과될 수 있으니, 신중히 고려하신 후 주문 부탁드립니다.",
     "colors": [
       {
-        "key": "gray",
-        "label": "그레이",
-        "hex": "#8f9196",
-        "images": [
-          "images/er-shawl-fringe-cape/gray_1.jpg",
-          "images/er-shawl-fringe-cape/gray_2.jpg",
-          "images/er-shawl-fringe-cape/gray_3.jpg",
-          "images/er-shawl-fringe-cape/gray_4.jpg",
-          "images/er-shawl-fringe-cape/gray_5.jpg"
-        ]
-      },
-      {
         "key": "camel",
         "label": "카멜",
         "hex": "#a07a62",
@@ -1001,6 +989,18 @@
           "images/er-shawl-fringe-cape/camel_4.jpg",
           "images/er-shawl-fringe-cape/camel_5.jpg",
           "images/er-shawl-fringe-cape/camel_6.jpg"
+        ]
+      },
+      {
+        "key": "gray",
+        "label": "그레이",
+        "hex": "#8f9196",
+        "images": [
+          "images/er-shawl-fringe-cape/gray_1.jpg",
+          "images/er-shawl-fringe-cape/gray_2.jpg",
+          "images/er-shawl-fringe-cape/gray_3.jpg",
+          "images/er-shawl-fringe-cape/gray_4.jpg",
+          "images/er-shawl-fringe-cape/gray_5.jpg"
         ]
       }
     ],
