@@ -115,5 +115,14 @@
     "category": "product",
     "memo": "엠메종-경량패딩 매입",
     "created_at": "2026-09-30T02:24:56"
+  },
+  {
+    "id": "59368a2a",
+    "date": "2026-09-30",
+    "amount": 29291,
+    "vat": 2929,
+    "category": "product",
+    "memo": "엠메종-샤니트 매입/1장",
+    "created_at": "2026-09-30T02:26:20"
   }
 ]
