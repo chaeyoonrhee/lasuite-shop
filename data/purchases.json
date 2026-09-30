@@ -142,14 +142,5 @@
     "category": "product",
     "memo": "바디펀-레이스니트 샘플 매입",
     "created_at": "2026-09-30T02:27:17"
-  },
-  {
-    "id": "ead4052a",
-    "date": "2026-09-22",
-    "amount": 36000,
-    "vat": 0,
-    "category": "product",
-    "memo": "바디펀-레이스니트 샘플 매입",
-    "created_at": "2026-09-30T02:27:20"
   }
 ]
