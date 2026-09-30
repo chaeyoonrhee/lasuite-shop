@@ -40,6 +40,14 @@ NAVERPAY_CLIENT_ID = os.environ.get("NAVERPAY_CLIENT_ID")
 NAVERPAY_CLIENT_SECRET = os.environ.get("NAVERPAY_CLIENT_SECRET")
 NAVERPAY_COMMON_SCRIPT_ID = os.environ.get("NAVERPAY_COMMON_SCRIPT_ID")
 
+# 네이버페이 검수 요구사항: 서비스 오픈 전까지는 일반 고객에게 버튼이 노출되면 안 되고,
+# 특정 테스트 계정/테스트 페이지에서만 보여야 한다 (2026-09-30 네이버 기술지원팀 회신).
+# NAVERPAY_TEST_ONLY=true(기본값)면 /naverpay-test-mode?key=<NAVERPAY_TEST_SECRET> 로
+# 접속해 발급받은 쿠키를 가진 브라우저에서만 버튼이 보인다. 검수 통과 후 정식 오픈할 때만
+# NAVERPAY_TEST_ONLY=false로 바꿔서 전체 고객에게 노출한다.
+NAVERPAY_TEST_ONLY = os.environ.get("NAVERPAY_TEST_ONLY", "true").lower() == "true"
+NAVERPAY_TEST_SECRET = os.environ.get("NAVERPAY_TEST_SECRET")
+
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
 
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
@@ -405,13 +413,39 @@ def payment_approve():
     return redirect(f"/payment-result.html?status=success&order={partner_order_id}&amount={order['total_amount']}")
 
 
+def _naverpay_is_test_visitor():
+    return request.cookies.get("naverpay_test") == "1"
+
+
+def _naverpay_visible_to_visitor():
+    """검수 통과 전(NAVERPAY_TEST_ONLY=true)에는 /naverpay-test-mode 링크로
+    쿠키를 발급받은 브라우저에만 버튼을 보여준다. 정식 오픈 후에는 전체 노출."""
+    return (not NAVERPAY_TEST_ONLY) or _naverpay_is_test_visitor()
+
+
+@app.route("/naverpay-test-mode")
+def naverpay_test_mode():
+    """검수용 테스트 페이지 진입점. 일반 고객은 이 URL을 모르므로 접근하지 않는다."""
+    if not NAVERPAY_TEST_SECRET or request.args.get("key") != NAVERPAY_TEST_SECRET:
+        return "Not found", 404
+    resp = redirect("/")
+    resp.set_cookie("naverpay_test", "1", max_age=60 * 60 * 24 * 30, httponly=True, samesite="Lax")
+    return resp
+
+
 @app.route("/api/naverpay/status")
 def naverpay_status():
-    """프론트엔드가 상품상세 페이지에 네이버페이/찜 버튼을 그려도 되는지, 그리고
-    버튼 스크립트 초기화에 필요한 값들을 확인할 때 쓴다.
-    NAVERPAY_ENABLED가 true이고 자격증명이 모두 설정된 경우에만 available=True.
-    가맹점 심사 승인 전까지는 항상 False — 사장님이 직접 활성화하기 전에는 켜지지 않는다."""
-    available = bool(NAVERPAY_ENABLED and NAVERPAY_PARTNER_ID and NAVERPAY_CLIENT_ID and NAVERPAY_CLIENT_SECRET)
+    """프론트엔드가 상품상세 페이지에 네이버페이 버튼을 그려도 되는지, 그리고
+    버튼 초기화에 필요한 값들을 확인할 때 쓴다.
+    NAVERPAY_ENABLED가 true이고 자격증명이 모두 설정되어 있으며, 검수 전이라면
+    /naverpay-test-mode로 발급받은 테스트 쿠키가 있는 경우에만 available=True."""
+    available = bool(
+        NAVERPAY_ENABLED
+        and NAVERPAY_PARTNER_ID
+        and NAVERPAY_CLIENT_ID
+        and NAVERPAY_CLIENT_SECRET
+        and _naverpay_visible_to_visitor()
+    )
     return jsonify({
         "available": available,
         "mode": NAVERPAY_MODE,
@@ -500,7 +534,7 @@ def naverpay_product_info():
 
 @app.route("/api/naverpay/order-register", methods=["POST"])
 def naverpay_order_register():
-    if not NAVERPAY_ENABLED:
+    if not NAVERPAY_ENABLED or not _naverpay_visible_to_visitor():
         return jsonify({"error": "네이버페이는 아직 준비 중입니다."}), 503
     if not (NAVERPAY_PARTNER_ID and NAVERPAY_CLIENT_ID and NAVERPAY_CLIENT_SECRET):
         return jsonify({"error": "네이버페이 인증정보가 설정되지 않았습니다."}), 500
