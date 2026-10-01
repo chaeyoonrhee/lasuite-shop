@@ -3,7 +3,6 @@ import json
 import os
 import re
 import uuid
-import xml.etree.ElementTree as ET
 from datetime import datetime
 
 import requests
@@ -563,8 +562,8 @@ def naverpay_order_register():
 
     back_url = _abs_url("/")
 
-    # NOTE: merchantId는 우리 가맹점ID가 아니라 공식 가이드 샘플에 나온 고정 리터럴 값이다.
-    # 실제 가맹점 식별은 certiKey(가맹점 인증키)로 이루어지는 것으로 보인다 (2026-09-28 실측 확인).
+    # merchantId는 실제 발급받은 가맹점ID(페이센터ID)를 그대로 써야 한다 — 가이드 샘플의
+    # "naver_pay"는 예시 값이었을 뿐 리터럴이 아니었다 (네이버 기술지원 2026-10-01 확인).
     # NOTE: 장바구니(여러 상품) 주문 등록의 정확한 XML 스키마는 공식 문서에 없어서, 공식 샘플의
     # 단일상품 <product> 블록을 상품 개수만큼 반복하는 방식으로 최선 추정 구현했다.
     # 실제 네이버 테스트 응답을 받아본 뒤 스키마가 다르면 이 부분을 수정해야 한다.
@@ -589,17 +588,14 @@ def naverpay_order_register():
         <shippingPolicy>
             <groupId>1</groupId>
             <method>DELIVERY</method>
-            <feeType>{"FREE" if shipping_fee == 0 else "CONDITIONAL_FREE"}</feeType>
-            <feePayType>PREPAYED</feePayType>
+            <feeType>{"FREE" if shipping_fee == 0 else "CHARGE"}</feeType>
+            <feePayType>{"FREE" if shipping_fee == 0 else "PREPAYED"}</feePayType>
             <feePrice>{shipping_fee}</feePrice>
-            <conditionalFree>
-                <basePrice>999999999</basePrice>
-            </conditionalFree>
         </shippingPolicy>
     </product>""")
 
     xml_body = f"""<order>
-    <merchantId>naver_pay</merchantId>
+    <merchantId>{_naverpay_xml_escape(NAVERPAY_PARTNER_ID)}</merchantId>
     <certiKey>{_naverpay_xml_escape(NAVERPAY_CLIENT_SECRET)}</certiKey>
     {"".join(product_blocks)}
     <backUrl><![CDATA[{back_url}]]></backUrl>
@@ -621,29 +617,20 @@ def naverpay_order_register():
     except Exception:
         return jsonify({"error": "네이버페이 서버와 통신 중 오류가 발생했습니다."}), 502
 
-    # NOTE: 이 API의 정확한 응답 스키마는 공식 문서에 명시돼 있지 않아 아래는 최선 추정이다.
-    # NAVERPAY_MODE=development로 실제 호출해보고 태그명이 다르면 이 파싱 로직을 수정해야 한다.
-    order_id = None
-    try:
-        root = ET.fromstring(r.text)
-        candidates = [root] + list(root.iter())
-        for el in candidates:
-            tag = el.tag.split("}")[-1].lower()
-            if tag in ("orderid", "order_id") and (el.text or "").strip():
-                order_id = el.text.strip()
-                break
-    except ET.ParseError:
-        pass
-
-    if not order_id:
+    # 공식 가이드 3.1.3: 성공 시 "SUCCESS:인증키:가맹점번호", 실패 시 "FAIL:[에러코드]메시지" 형식의
+    # 평문(XML 아님) 응답. 인증키/가맹점번호는 고정값이 아니라 이 응답에서 매번 새로 받는 값이며,
+    # 그대로 주문서 URL의 경로 값으로 사용한다 (네이버 기술지원 2026-10-01 확인).
+    parts = r.text.split(":", 2)
+    if parts[0] != "SUCCESS" or len(parts) < 3:
         error_payload = {"error": "주문 등록에 실패했습니다."}
         if NAVERPAY_MODE != "production":
             error_payload["raw"] = r.text[:1000]
         return jsonify(error_payload), 502
 
+    auth_key, merchant_no = parts[1], parts[2]
     is_mobile = bool(re.search(r"Mobile|iPhone|Android", request.headers.get("User-Agent") or ""))
     base = domains["order_mobile"] if is_mobile else domains["order_pc"]
-    order_form_url = f"{base}/{NAVERPAY_CLIENT_ID}/{NAVERPAY_PARTNER_ID}?orderId={order_id}"
+    order_form_url = f"{base}/{auth_key}/{merchant_no}"
 
     return jsonify({"orderFormUrl": order_form_url, "isMobile": is_mobile})
 
