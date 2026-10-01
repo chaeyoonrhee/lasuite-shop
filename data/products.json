@@ -829,25 +829,6 @@
     "createdAt": "2026-09-28",
     "colors": [
       {
-        "key": "beige",
-        "label": "베이지",
-        "hex": "#e4dccd",
-        "images": [
-          "images/open-shawl-cardigan/charcoal_1.jpg",
-          "images/open-shawl-cardigan/beige_1.jpg",
-          "images/open-shawl-cardigan/group_1.jpg",
-          "images/open-shawl-cardigan/charcoal_6.jpg",
-          "images/open-shawl-cardigan/charcoal_2.jpg",
-          "images/open-shawl-cardigan/charcoal_3.jpg",
-          "images/open-shawl-cardigan/charcoal_4.jpg",
-          "images/open-shawl-cardigan/charcoal_5.jpg",
-          "images/open-shawl-cardigan/charcoal_7.jpg",
-          "images/open-shawl-cardigan/charcoal_8.jpg",
-          "images/open-shawl-cardigan/charcoal_9.jpg",
-          "images/open-shawl-cardigan/black_1.jpg"
-        ]
-      },
-      {
         "key": "charcoal",
         "label": "차콜",
         "hex": "#4a4a4a",
@@ -867,13 +848,32 @@
         ]
       },
       {
+        "key": "beige",
+        "label": "베이지",
+        "hex": "#e4dccd",
+        "images": [
+          "images/open-shawl-cardigan/beige_1.jpg",
+          "images/open-shawl-cardigan/group_1.jpg",
+          "images/open-shawl-cardigan/charcoal_1.jpg",
+          "images/open-shawl-cardigan/charcoal_6.jpg",
+          "images/open-shawl-cardigan/charcoal_2.jpg",
+          "images/open-shawl-cardigan/charcoal_3.jpg",
+          "images/open-shawl-cardigan/charcoal_4.jpg",
+          "images/open-shawl-cardigan/charcoal_5.jpg",
+          "images/open-shawl-cardigan/charcoal_7.jpg",
+          "images/open-shawl-cardigan/charcoal_8.jpg",
+          "images/open-shawl-cardigan/charcoal_9.jpg",
+          "images/open-shawl-cardigan/black_1.jpg"
+        ]
+      },
+      {
         "key": "black",
         "label": "블랙",
         "hex": "#181818",
         "images": [
-          "images/open-shawl-cardigan/charcoal_1.jpg",
           "images/open-shawl-cardigan/black_1.jpg",
           "images/open-shawl-cardigan/group_1.jpg",
+          "images/open-shawl-cardigan/charcoal_1.jpg",
           "images/open-shawl-cardigan/charcoal_6.jpg",
           "images/open-shawl-cardigan/charcoal_2.jpg",
           "images/open-shawl-cardigan/charcoal_3.jpg",
