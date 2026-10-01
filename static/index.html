@@ -659,7 +659,7 @@ function renderGrid(){
   list.forEach(p => {
     const card = document.createElement('div');
     card.className = 'product-card';
-    const thumb = p.colors ? p.colors[0].images[0] : null;
+    const thumb = p.cardImage || (p.colors ? p.colors[0].images[0] : null);
     card.innerHTML = `
       <div class="product-media" style="background:${thumb ? '#fff' : p.tone+'22'};color:${p.soldout ? '#c2bcae' : '#3a332a'}">
         ${p.vipOnly ? '<span class="badge vip">VIP</span>' : isNew(p) && !p.soldout ? '<span class="badge">NEW</span>' : ''}
