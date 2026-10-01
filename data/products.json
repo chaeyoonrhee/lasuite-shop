@@ -914,6 +914,7 @@
         "label": "그레이",
         "hex": "#9a9d9f",
         "images": [
+          "images/lace-layered-cardigan/gray_self_1.jpg",
           "images/lace-layered-cardigan/gray_1.jpg",
           "images/lace-layered-cardigan/gray_2.jpg",
           "images/lace-layered-cardigan/group_2.jpg",
@@ -933,6 +934,7 @@
         "label": "브라운",
         "hex": "#3f2a1d",
         "images": [
+          "images/lace-layered-cardigan/brown_self_1.jpg",
           "images/lace-layered-cardigan/brown_1.jpg",
           "images/lace-layered-cardigan/brown_2.jpg",
           "images/lace-layered-cardigan/brown_3.jpg"
