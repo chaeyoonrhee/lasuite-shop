@@ -427,7 +427,7 @@ def naverpay_test_mode():
     """검수용 테스트 페이지 진입점. 일반 고객은 이 URL을 모르므로 접근하지 않는다."""
     if not NAVERPAY_TEST_SECRET or request.args.get("key") != NAVERPAY_TEST_SECRET:
         return "Not found", 404
-    resp = redirect("/")
+    resp = redirect("/?naverpay_test=on")
     resp.set_cookie("naverpay_test", "1", max_age=60 * 60 * 24 * 30, httponly=True, samesite="Lax")
     return resp
 
