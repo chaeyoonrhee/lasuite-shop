@@ -333,6 +333,7 @@
     position:fixed; bottom:32px; left:50%; transform:translateX(-50%) translateY(20px);
     background:var(--ink); color:var(--ivory); padding:14px 26px; font-size:13px;
     letter-spacing:0.03em; z-index:400; opacity:0; pointer-events:none; transition:.3s;
+    max-width:min(90vw, 440px); text-align:center; line-height:1.6;
   }
   .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
 
@@ -659,7 +660,7 @@ function renderGrid(){
   list.forEach(p => {
     const card = document.createElement('div');
     card.className = 'product-card';
-    const thumb = p.cardImage || (p.colors ? p.colors[0].images[0] : null);
+    const thumb = p.colors ? p.colors[0].images[0] : null;
     card.innerHTML = `
       <div class="product-media" style="background:${thumb ? '#fff' : p.tone+'22'};color:${p.soldout ? '#c2bcae' : '#3a332a'}">
         ${p.vipOnly ? '<span class="badge vip">VIP</span>' : isNew(p) && !p.soldout ? '<span class="badge">NEW</span>' : ''}
@@ -1172,12 +1173,12 @@ document.getElementById('vipLogoutBtn').addEventListener('click', async () => {
 });
 
 let toastTimer;
-function showToast(msg){
+function showToast(msg, duration){
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+  toastTimer = setTimeout(() => t.classList.remove('show'), duration || 2200);
 }
 
 document.querySelectorAll('.cat-link').forEach(a => {
@@ -1389,6 +1390,16 @@ document.getElementById('checkoutBtn').addEventListener('click', handleCheckout)
 
 loadProducts();
 renderCart();
+
+(function(){
+  const params = new URLSearchParams(location.search);
+  if (params.get('naverpay_test') === 'on') {
+    showToast('네이버페이 테스트 모드가 켜졌습니다. 상품을 장바구니에 담고 결제수단에서 "네이버페이"를 눌러 확인해주세요.', 8000);
+    params.delete('naverpay_test');
+    const qs = params.toString();
+    history.replaceState(null, '', location.pathname + (qs ? '?' + qs : ''));
+  }
+})();
 </script>
 </body>
 </html>
