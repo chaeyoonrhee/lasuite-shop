@@ -450,7 +450,7 @@ def naverpay_status():
         "mode": NAVERPAY_MODE,
         "buttonKey": NAVERPAY_CLIENT_ID if available else None,
         "partnerId": NAVERPAY_PARTNER_ID if available else None,
-        "commonScriptId": NAVERPAY_COMMON_SCRIPT_ID,
+        "sdkUrl": _naverpay_domains()["button_sdk"] if available else None,
     })
 
 
@@ -461,6 +461,12 @@ def _naverpay_domains():
         "register": f"https://{prefix}api.pay.naver.com/o/customer/api/order/v20/register",
         "order_pc": f"https://{prefix}order.pay.naver.com/customer/buy",
         "order_mobile": f"https://{prefix}m.pay.naver.com/o/customer/buy",
+        "wishlist": f"https://{'test-' if prefix else ''}pay.naver.com/customer/api/wishlist.nhn",
+        "button_sdk": (
+            "https://npay-order.pstatic.net/assets/button/latest/npay.button.js"
+            if not prefix
+            else "https://test-pay.naver.com/assets/button/latest/npay.button.js"
+        ),
     }
 
 
@@ -627,12 +633,54 @@ def naverpay_order_register():
             error_payload["raw"] = r.text[:1000]
         return jsonify(error_payload), 502
 
-    auth_key, merchant_no = parts[1], parts[2]
-    is_mobile = bool(re.search(r"Mobile|iPhone|Android", request.headers.get("User-Agent") or ""))
-    base = domains["order_mobile"] if is_mobile else domains["order_pc"]
-    order_form_url = f"{base}/{auth_key}/{merchant_no}"
+    # 버튼 SDK(onBuyClick)가 이 두 값으로 주문서 URL을 직접 만들어 페이지 전환한다.
+    return jsonify({"key": parts[1], "merchantNo": parts[2]})
 
-    return jsonify({"orderFormUrl": order_form_url, "isMobile": is_mobile})
+
+@app.route("/api/naverpay/wishlist", methods=["POST"])
+def naverpay_wishlist():
+    if not NAVERPAY_ENABLED or not _naverpay_visible_to_visitor():
+        return jsonify({"error": "네이버페이는 아직 준비 중입니다."}), 503
+    if not (NAVERPAY_PARTNER_ID and NAVERPAY_CLIENT_SECRET):
+        return jsonify({"error": "네이버페이 인증정보가 설정되지 않았습니다."}), 500
+
+    data = request.get_json(force=True, silent=True) or {}
+    try:
+        product_id = int(data.get("productId"))
+    except (TypeError, ValueError):
+        return jsonify({"error": "상품 정보가 올바르지 않습니다."}), 400
+
+    try:
+        products, _ = github_get_json_file(GITHUB_PRODUCTS_PATH, [])
+    except Exception:
+        return jsonify({"error": "상품 정보를 불러오지 못했습니다."}), 502
+    product = next((p for p in products if p.get("id") == product_id), None)
+    if not product or product.get("hidden") or product.get("soldout"):
+        return jsonify({"error": "찜할 수 없는 상품입니다."}), 400
+
+    thumb = product["colors"][0]["images"][0] if product.get("colors") else ""
+    form = {
+        "SHOP_ID": NAVERPAY_PARTNER_ID,
+        "CERTI_KEY": NAVERPAY_CLIENT_SECRET,
+        "ITEM_ID": str(product_id),
+        "ITEM_NAME": product.get("kr", ""),
+        "ITEM_UPRICE": str(int(product.get("price", 0))),
+        "ITEM_IMAGE": _abs_url(thumb) if thumb else "",
+        "ITEM_URL": _abs_url(f"p/{product_id}"),
+    }
+    try:
+        r = requests.post(_naverpay_domains()["wishlist"], data=form, timeout=10)
+    except Exception:
+        return jsonify({"error": "네이버페이 서버와 통신 중 오류가 발생했습니다."}), 502
+
+    # 공식 가이드 3.4.2: 응답 본문이 영문/숫자 최대 19자리의 네이버페이 상품 ID.
+    pay_product_id = r.text.strip()
+    if not re.fullmatch(r"[A-Za-z0-9]{1,19}", pay_product_id):
+        error_payload = {"error": "찜 등록에 실패했습니다."}
+        if NAVERPAY_MODE != "production":
+            error_payload["raw"] = r.text[:500]
+        return jsonify(error_payload), 502
+    return jsonify({"merchantId": NAVERPAY_PARTNER_ID, "payProductId": pay_product_id})
 
 
 @app.route("/api/orders/<order_id>")
