@@ -881,7 +881,9 @@ function openModal(p){
   document.getElementById('addToCartBtn')?.addEventListener('click', () => {
     if(!selectedSize){ showToast((isBag && p.sizes) ? '사이즈를 선택해 주세요' : (isBag ? '색상을 선택해 주세요' : '사이즈를 선택해 주세요')); return; }
     const thumb = isBag ? p.colors[selectedColorIdx].images[0] : null;
-    cart.push({...p, size: selectedSize, qty: selectedQty, thumb, price: currentPrice});
+    const optColor = isBag ? p.colors[selectedColorIdx].label : null;
+    const optSize = isBag ? (p.sizeOptions ? p.sizeOptions[selectedSizeOptIdx].label : (p.sizes ? selectedPlainSize : null)) : selectedSize;
+    cart.push({...p, size: selectedSize, optColor, optSize, qty: selectedQty, thumb, price: currentPrice});
     renderCart();
     closeModal();
     showToast(`${p.kr}(${selectedSize}) 장바구니에 담았습니다`);
@@ -894,13 +896,24 @@ function openModal(p){
 let currentModalProduct = null;
 
 function initNaverPayDetailButton(p){
-  if(naverPaySdkReady && !p.soldout && document.getElementById('npay-detail-container')){
+  if(naverPaySdkReady && !p.soldout && naverPaySupported(p) && document.getElementById('npay-detail-container')){
     document.getElementById('npay-detail-container').style.display = '';
     naverPayCreateButton('npay-detail-container', {
       components: {talkTalk: false, wishlist: true, benefitMessage: true, benefitCoachMark: true},
       onBuyClick: async () => {
         if(!selectedSize){ alert('상품 옵션을 선택해 주세요.'); return null; }
-        return naverPayRegisterOrder([{productId: p.id, qty: selectedQty}]);
+        const optColor = p.colors ? p.colors[selectedColorIdx].label : null;
+        const optSize = p.colors ? (p.sizeOptions ? p.sizeOptions[selectedSizeOptIdx].label : (p.sizes ? selectedPlainSize : null)) : selectedSize;
+        const result = await naverPayRegisterOrder([{productId: p.id, qty: selectedQty, color: optColor, size: optSize}]);
+        if(result){
+          // 네이버 주문서에서 뒤로 돌아왔을 때 다른 상품과 함께 담을 수 있도록 장바구니에도 보관한다.
+          const thumb = p.colors ? p.colors[selectedColorIdx].images[0] : null;
+          const existing = cart.find(i => i.id === p.id && i.size === selectedSize);
+          if(existing){ existing.qty = selectedQty; }
+          else { cart.push({...p, size: selectedSize, optColor, optSize, qty: selectedQty, thumb, price: currentPrice}); }
+          renderCart();
+        }
+        return result;
       },
       onWishlistClick: async () => {
         try{
@@ -1280,6 +1293,19 @@ async function naverPayRegisterOrder(items){
   }
 }
 
+function naverPaySupported(p){
+  return !(p.sizeOptions && new Set(p.sizeOptions.map(o => o.price)).size > 1);
+}
+
+function naverPayCartItem(i){
+  let color = i.optColor, size = i.optSize;
+  if(color === undefined && i.size){
+    const parts = String(i.size).split(' / ');
+    color = parts[0]; size = parts[1] || null;
+  }
+  return {productId: i.id, qty: i.qty, color: color || null, size: size || null};
+}
+
 function naverPayCreateButton(containerId, opts){
   if(!naverPaySdkReady || !window.Npay || !document.getElementById(containerId)) return;
   try{
@@ -1302,7 +1328,9 @@ function initNaverPayCartButton(){
     components: {talkTalk: false, wishlist: false, benefitMessage: true, benefitCoachMark: true},
     onBuyClick: async () => {
       if(cart.length === 0){ alert('장바구니가 비어 있습니다.'); return null; }
-      return naverPayRegisterOrder(cart.map(i => ({productId: i.id, qty: i.qty})));
+      const unsupported = cart.find(i => !naverPaySupported(i));
+      if(unsupported){ alert(`'${unsupported.kr}' 상품은 네이버페이로 구매할 수 없습니다. 다른 결제수단을 이용해 주세요.`); return null; }
+      return naverPayRegisterOrder(cart.map(naverPayCartItem));
     }
   });
 }
