@@ -964,6 +964,7 @@ function renderCart(){
   document.getElementById('cartTotal').textContent = won(itemsTotal);
   document.getElementById('cartShipping').textContent = won(shippingFee);
   document.getElementById('cartGrandTotal').textContent = won(itemsTotal + shippingFee);
+  initNaverPayCartButton();
 }
 
 const cartDrawer = document.getElementById('cartDrawer');
@@ -1320,10 +1321,21 @@ function naverPayCreateButton(containerId, opts){
   } catch(err){ console.error('Npay button init failed', err); }
 }
 
+let naverPayCartCreated = false;
+
+// 빈 장바구니에서는 네이버페이 버튼을 만들지 않고, 비워지면 다시 제거한다.
 function initNaverPayCartButton(){
   const box = document.getElementById('npay-cart-container');
   if(!box || !naverPaySdkReady) return;
+  if(cart.length === 0){
+    box.style.display = 'none';
+    box.innerHTML = '';
+    naverPayCartCreated = false;
+    return;
+  }
   box.style.display = '';
+  if(naverPayCartCreated) return;
+  naverPayCartCreated = true;
   naverPayCreateButton('npay-cart-container', {
     components: {talkTalk: false, wishlist: false, benefitMessage: false, benefitCoachMark: false},
     onBuyClick: async () => {
