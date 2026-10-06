@@ -899,7 +899,7 @@ function initNaverPayDetailButton(p){
   if(naverPaySdkReady && !p.soldout && naverPaySupported(p) && document.getElementById('npay-detail-container')){
     document.getElementById('npay-detail-container').style.display = '';
     naverPayCreateButton('npay-detail-container', {
-      components: {talkTalk: false, wishlist: true, benefitMessage: true, benefitCoachMark: true},
+      components: {talkTalk: false, wishlist: true, benefitMessage: false, benefitCoachMark: false},
       onBuyClick: async () => {
         if(!selectedSize){ alert('상품 옵션을 선택해 주세요.'); return null; }
         const optColor = p.colors ? p.colors[selectedColorIdx].label : null;
@@ -1325,7 +1325,7 @@ function initNaverPayCartButton(){
   if(!box || !naverPaySdkReady) return;
   box.style.display = '';
   naverPayCreateButton('npay-cart-container', {
-    components: {talkTalk: false, wishlist: false, benefitMessage: true, benefitCoachMark: true},
+    components: {talkTalk: false, wishlist: false, benefitMessage: false, benefitCoachMark: false},
     onBuyClick: async () => {
       if(cart.length === 0){ alert('장바구니가 비어 있습니다.'); return null; }
       const unsupported = cart.find(i => !naverPaySupported(i));
