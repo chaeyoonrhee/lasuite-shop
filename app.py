@@ -474,20 +474,82 @@ def _naverpay_xml_escape(value):
     return (str(value) if value is not None else "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
+NAVERPAY_RETURN_INFO = {
+    "zipcode": "04403",
+    "address1": "서울 용산구 대사관로12길",
+    "address2": "3",
+    "sellername": "라스윗(LA SUITE)",
+    "contact1": "01091568585",
+}
+
+
+def _naverpay_shipping_policy_xml(shipping_fee):
+    """주문등록 XML과 상품정보 XML이 반드시 같은 배송정책을 내려주도록 한 곳에서 만든다."""
+    free = shipping_fee == 0
+    return f"""<shippingPolicy>
+            <groupId>1</groupId>
+            <method>DELIVERY</method>
+            <feeType>{"FREE" if free else "CHARGE"}</feeType>
+            <feePayType>{"FREE" if free else "PREPAYED"}</feePayType>
+            <feePrice>{shipping_fee}</feePrice>
+        </shippingPolicy>"""
+
+
+def _naverpay_option_spec(product):
+    """상품의 선택형 옵션 정의: [(옵션명, [(옵션값ID, 옵션값텍스트), ...]), ...].
+    옵션값 ID는 공백/한글 불가(영문·숫자·일부 기호만)라 상품 데이터상의 순번으로 만든다.
+    주문등록 XML(selectedItem)과 상품정보 XML(optionItem)이 이 한 곳을 같이 쓴다."""
+    spec = []
+    colors = product.get("colors")
+    if colors:
+        spec.append(("색상", [(f"c{i}", c["label"]) for i, c in enumerate(colors)]))
+    if product.get("sizeOptions"):
+        labels = [o.get("label") for o in product["sizeOptions"]]
+    elif product.get("sizes"):
+        labels = list(product["sizes"])
+    elif not colors:
+        labels = ["S", "M", "L"]
+    else:
+        labels = None
+    if labels:
+        spec.append(("사이즈", [(f"s{i}", str(l)) for i, l in enumerate(labels)]))
+    return spec
+
+
+def _naverpay_product_supported(product):
+    """옵션별 가격이 다른 상품은 옵션 관리 코드/옵션 조합 가격 연동이 필요해서 아직 제외한다."""
+    so = product.get("sizeOptions")
+    return not (so and len({o.get("price") for o in so}) > 1)
+
+
+def _naverpay_resolve_options(product, color, size):
+    """고객이 고른 색상/사이즈를 네이버 주문 XML의 selectedItem 값으로 변환한다."""
+    chosen = {"색상": color, "사이즈": size}
+    options = []
+    for name, values in _naverpay_option_spec(product):
+        match = next((v for v in values if v[1] == chosen[name]), None)
+        if match is None:
+            raise ValueError(name)
+        options.append((name, match[0], match[1]))
+    return options
+
+
 @app.route("/naverpay/product-info")
 def naverpay_product_info():
-    """네이버페이가 비주기적으로 상품 정보(가격/재고/판매상태)를 확인하러 호출하는 엔드포인트.
-    요청 형식: ?product[0][id]=1111&product[1][id]=2222"""
+    """네이버페이가 비주기적으로 상품 정보(가격/재고/판매상태/옵션)를 확인하러 호출하는 엔드포인트.
+    요청 형식: ?product[0][id]=1111&product[1][id]=2222&optionSearch=true"""
     try:
         products, _ = github_get_json_file(GITHUB_PRODUCTS_PATH, [])
     except Exception:
         products = []
 
+    option_search = request.args.get("optionSearch") == "true"
     ids = []
     for key, value in request.args.items():
         if re.match(r"product\[\d+\]\[id\]$", key):
             ids.append(value)
 
+    ri = NAVERPAY_RETURN_INFO
     parts = ['<?xml version="1.0" encoding="utf-8"?>', "<products>"]
     for pid_str in ids:
         try:
@@ -502,6 +564,20 @@ def naverpay_product_info():
         info_url = _abs_url(f"p/{pid}")
         shipping_fee = int(product.get("shippingFee") or 0)
         name = _naverpay_xml_escape(product.get("kr", ""))
+        spec = _naverpay_option_spec(product)
+        option_xml = ""
+        if spec and option_search:
+            items = "".join(
+                "<optionItem><type>SELECT</type><name>%s</name>%s</optionItem>" % (
+                    _naverpay_xml_escape(opt_name),
+                    "".join(
+                        "<value><id>%s</id><text>%s</text></value>" % (vid, _naverpay_xml_escape(vtext))
+                        for vid, vtext in values
+                    ),
+                )
+                for opt_name, values in spec
+            )
+            option_xml = f"<option>{items}</option>"
         parts.append(f"""<product>
     <id>{pid}</id>
     <ecMallProductId>{pid}</ecMallProductId>
@@ -513,59 +589,22 @@ def naverpay_product_info():
     <status>{"SOLD_OUT" if product.get("soldout") else "ON_SALE"}</status>
     <stockQuantity>{0 if product.get("soldout") else 999}</stockQuantity>
     <supplementSupport>false</supplementSupport>
-    <optionSupport>false</optionSupport>
+    <optionSupport>{"true" if spec else "false"}</optionSupport>
     <returnShippingFee>{shipping_fee * 2}</returnShippingFee>
     <exchangeShippingFee>{shipping_fee * 2}</exchangeShippingFee>
     <returnInfo>
-        <address1><![CDATA[서울 용산구 대사관로12길 3]]></address1>
-        <sellername><![CDATA[라스윗(LA SUITE)]]></sellername>
-        <contact1>01091568585</contact1>
-        <contact2>01091568585</contact2>
+        <zipcode>{ri["zipcode"]}</zipcode>
+        <address1><![CDATA[{ri["address1"]}]]></address1>
+        <address2><![CDATA[{ri["address2"]}]]></address2>
+        <sellername><![CDATA[{ri["sellername"]}]]></sellername>
+        <contact1>{ri["contact1"]}</contact1>
+        <contact2>{ri["contact1"]}</contact2>
     </returnInfo>
-    <shippingPolicy>
-        <groupId>1</groupId>
-        <method>DELIVERY</method>
-        <feeType>{"FREE" if shipping_fee == 0 else "CONDITIONAL_FREE"}</feeType>
-        <feePayType>PREPAYED</feePayType>
-        <feePrice>{shipping_fee}</feePrice>
-        <conditionalFree>
-            <basePrice>999999999</basePrice>
-        </conditionalFree>
-    </shippingPolicy>
+    {option_xml}
+    {_naverpay_shipping_policy_xml(shipping_fee)}
 </product>""")
     parts.append("</products>")
     return Response("".join(parts), mimetype="application/xml")
-
-
-def _naverpay_product_supported(product):
-    """옵션별 가격이 다른 상품은 옵션 관리 코드/상품정보 옵션 응답 연동이 필요해서 아직 제외한다."""
-    so = product.get("sizeOptions")
-    return not (so and len({o.get("price") for o in so}) > 1)
-
-
-def _naverpay_resolve_options(product, color, size):
-    """고객이 고른 색상/사이즈를 네이버 주문 XML의 selectedItem 값으로 변환한다.
-    옵션 ID는 공백/한글 불가(영문·숫자·일부 기호만)라 상품 데이터상의 순번으로 만든다."""
-    options = []
-    colors = product.get("colors")
-    if colors:
-        idx = next((i for i, c in enumerate(colors) if c.get("label") == color), None)
-        if idx is None:
-            raise ValueError("color")
-        options.append(("색상", f"c{idx}", colors[idx]["label"]))
-    if product.get("sizeOptions"):
-        labels = [o.get("label") for o in product["sizeOptions"]]
-    elif product.get("sizes"):
-        labels = product["sizes"]
-    elif not colors:
-        labels = ["S", "M", "L"]
-    else:
-        labels = None
-    if labels:
-        if size not in labels:
-            raise ValueError("size")
-        options.append(("사이즈", f"s{labels.index(size)}", str(size)))
-    return options
 
 
 @app.route("/api/naverpay/order-register", methods=["POST"])
@@ -647,13 +686,7 @@ def naverpay_order_register():
         <infoUrl><![CDATA[{info_url}]]></infoUrl>
         <imageUrl><![CDATA[{image_url}]]></imageUrl>
         {"".join(option_blocks)}
-        <shippingPolicy>
-            <groupId>1</groupId>
-            <method>DELIVERY</method>
-            <feeType>{"FREE" if shipping_fee == 0 else "CHARGE"}</feeType>
-            <feePayType>{"FREE" if shipping_fee == 0 else "PREPAYED"}</feePayType>
-            <feePrice>{shipping_fee}</feePrice>
-        </shippingPolicy>
+        {_naverpay_shipping_policy_xml(shipping_fee)}
     </product>""")
 
     xml_body = f"""<order>
