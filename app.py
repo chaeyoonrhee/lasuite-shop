@@ -537,6 +537,37 @@ def naverpay_product_info():
     return Response("".join(parts), mimetype="application/xml")
 
 
+def _naverpay_product_supported(product):
+    """옵션별 가격이 다른 상품은 옵션 관리 코드/상품정보 옵션 응답 연동이 필요해서 아직 제외한다."""
+    so = product.get("sizeOptions")
+    return not (so and len({o.get("price") for o in so}) > 1)
+
+
+def _naverpay_resolve_options(product, color, size):
+    """고객이 고른 색상/사이즈를 네이버 주문 XML의 selectedItem 값으로 변환한다.
+    옵션 ID는 공백/한글 불가(영문·숫자·일부 기호만)라 상품 데이터상의 순번으로 만든다."""
+    options = []
+    colors = product.get("colors")
+    if colors:
+        idx = next((i for i, c in enumerate(colors) if c.get("label") == color), None)
+        if idx is None:
+            raise ValueError("color")
+        options.append(("색상", f"c{idx}", colors[idx]["label"]))
+    if product.get("sizeOptions"):
+        labels = [o.get("label") for o in product["sizeOptions"]]
+    elif product.get("sizes"):
+        labels = product["sizes"]
+    elif not colors:
+        labels = ["S", "M", "L"]
+    else:
+        labels = None
+    if labels:
+        if size not in labels:
+            raise ValueError("size")
+        options.append(("사이즈", f"s{labels.index(size)}", str(size)))
+    return options
+
+
 @app.route("/api/naverpay/order-register", methods=["POST"])
 def naverpay_order_register():
     if not NAVERPAY_ENABLED or not _naverpay_visible_to_visitor():
@@ -554,32 +585,59 @@ def naverpay_order_register():
     except Exception:
         return jsonify({"error": "상품 정보를 불러오지 못했습니다."}), 502
 
-    resolved = []
+    # 같은 상품을 옵션만 다르게 여러 줄 담은 경우 <product> 하나에 <option>을 옵션 조합 수만큼 반복한다.
+    grouped = {}
     for item in cart_items:
         try:
             product_id = int(item.get("productId"))
         except (TypeError, ValueError, AttributeError):
             return jsonify({"error": "상품 정보가 올바르지 않습니다."}), 400
-        qty = max(1, int(item.get("qty") or 1))
+        try:
+            qty = max(1, int(item.get("qty") or 1))
+        except (TypeError, ValueError):
+            qty = 1
         product = next((p for p in products if p.get("id") == product_id), None)
         if not product or product.get("hidden") or product.get("soldout"):
             return jsonify({"error": "구매할 수 없는 상품이 포함되어 있습니다."}), 400
-        resolved.append((product_id, qty, product))
+        if not _naverpay_product_supported(product):
+            return jsonify({"error": f"'{product.get('kr', '')}' 상품은 네이버페이로 구매할 수 없습니다."}), 400
+        try:
+            options = _naverpay_resolve_options(product, item.get("color"), item.get("size"))
+        except ValueError:
+            return jsonify({"error": "상품 옵션을 선택해 주세요."}), 400
+        entry = grouped.setdefault(product_id, {"product": product, "combos": {}})
+        key = tuple(options)
+        entry["combos"][key] = entry["combos"].get(key, 0) + qty
 
     back_url = _abs_url("/")
 
     # merchantId는 실제 발급받은 가맹점ID(페이센터ID)를 그대로 써야 한다 — 가이드 샘플의
     # "naver_pay"는 예시 값이었을 뿐 리터럴이 아니었다 (네이버 기술지원 2026-10-01 확인).
-    # NOTE: 장바구니(여러 상품) 주문 등록의 정확한 XML 스키마는 공식 문서에 없어서, 공식 샘플의
-    # 단일상품 <product> 블록을 상품 개수만큼 반복하는 방식으로 최선 추정 구현했다.
-    # 실제 네이버 테스트 응답을 받아본 뒤 스키마가 다르면 이 부분을 수정해야 한다.
     product_blocks = []
-    for product_id, qty, product in resolved:
+    for product_id, entry in grouped.items():
+        product = entry["product"]
         thumb = product["colors"][0]["images"][0] if product.get("colors") else ""
         image_url = _abs_url(thumb) if thumb else ""
         info_url = _abs_url(f"p/{product_id}")
         shipping_fee = int(product.get("shippingFee") or 0)
         name = _naverpay_xml_escape(product.get("kr", ""))
+        option_blocks = []
+        for options, qty in entry["combos"].items():
+            items_xml = "".join(
+                f"""<selectedItem>
+                <name>{_naverpay_xml_escape(opt_name)}</name>
+                <type>SELECT</type>
+                <value>
+                    <id>{opt_id}</id>
+                    <text>{_naverpay_xml_escape(opt_text)}</text>
+                </value>
+            </selectedItem>"""
+                for opt_name, opt_id, opt_text in options
+            )
+            option_blocks.append(f"""<option>
+            <quantity>{qty}</quantity>
+            {items_xml}
+        </option>""")
         product_blocks.append(f"""<product>
         <id>{product_id}</id>
         <ecMallProductId>{product_id}</ecMallProductId>
@@ -588,9 +646,7 @@ def naverpay_order_register():
         <taxType>TAX</taxType>
         <infoUrl><![CDATA[{info_url}]]></infoUrl>
         <imageUrl><![CDATA[{image_url}]]></imageUrl>
-        <single>
-            <quantity>{qty}</quantity>
-        </single>
+        {"".join(option_blocks)}
         <shippingPolicy>
             <groupId>1</groupId>
             <method>DELIVERY</method>
