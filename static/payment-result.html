@@ -51,6 +51,13 @@
   }
   .btn:hover{background:#000;}
 </style>
+<script type="text/javascript" src="//wcs.naver.net/wcslog.js"></script>
+<script type="text/javascript">
+if(!wcs_add) var wcs_add = {};
+wcs_add["wa"] = "s_57796be3da5a";
+wcs.checkoutWhitelist = ["lasuiteseoul.kr","www.lasuiteseoul.kr"];
+wcs.inflow("lasuiteseoul.kr");
+</script>
 </head>
 <body>
   <div class="card">
@@ -120,6 +127,9 @@ if(status === 'success'){
   title.textContent = '결제에 실패했습니다';
   desc.textContent = '결제 처리 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.';
 }
+</script>
+<script type="text/javascript">
+wcs_do();
 </script>
 </body>
 </html>
