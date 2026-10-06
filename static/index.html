@@ -424,6 +424,12 @@ wcs.inflow("lasuiteseoul.kr");
     <div class="cart-total-row sub"><span>배송비</span><span class="amt" id="cartShipping">0원</span></div>
     <div class="cart-total-row grand"><span>총 결제금액</span><span class="amt" id="cartGrandTotal">0원</span></div>
 
+    <div id="npayCartWrap" style="display:none;margin:4px 0 6px;">
+      <div id="npay-cart-container"></div>
+      <div style="font-size:11.5px;color:var(--ink-soft);text-align:center;margin-top:8px;line-height:1.6;">네이버페이는 네이버 결제 화면에서 배송지를 입력합니다.<br>아래 정보 입력 없이 바로 결제하세요.</div>
+      <div style="display:flex;align-items:center;gap:10px;margin:16px 0 4px;color:var(--ink-soft);font-size:12px;"><span style="flex:1;height:1px;background:var(--line, #e3dccf);"></span>또는 직접 주문<span style="flex:1;height:1px;background:var(--line, #e3dccf);"></span></div>
+    </div>
+
     <div class="shipping-form" id="shippingFormWrap">
       <div class="option-label">주문자 정보</div>
       <input type="text" id="ordererName" placeholder="주문자 성함">
@@ -453,7 +459,6 @@ wcs.inflow("lasuiteseoul.kr");
 
     <button class="btn primary" id="checkoutBtn" style="width:100%">무통장입금 주문하기</button>
     <div class="pay-note" id="payNote">주문 후 입금 확인되면 배송이 시작됩니다</div>
-    <div id="npay-cart-container" style="display:none;margin-top:14px;min-height:150px;"></div>
   </div>
 </div>
 
@@ -1326,14 +1331,15 @@ let naverPayCartCreated = false;
 // 빈 장바구니에서는 네이버페이 버튼을 만들지 않고, 비워지면 다시 제거한다.
 function initNaverPayCartButton(){
   const box = document.getElementById('npay-cart-container');
-  if(!box || !naverPaySdkReady) return;
+  const wrap = document.getElementById('npayCartWrap');
+  if(!box || !wrap || !naverPaySdkReady) return;
   if(cart.length === 0){
-    box.style.display = 'none';
+    wrap.style.display = 'none';
     box.innerHTML = '';
     naverPayCartCreated = false;
     return;
   }
-  box.style.display = '';
+  wrap.style.display = '';
   if(naverPayCartCreated) return;
   naverPayCartCreated = true;
   naverPayCreateButton('npay-cart-container', {
