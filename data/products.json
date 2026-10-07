@@ -1086,5 +1086,64 @@
       }
     ],
     "createdAt": "2026-10-01"
+  },
+  {
+    "id": 15,
+    "en": "ONE-BUTTON RIBBED SHAWL",
+    "kr": "원버튼 골지숄",
+    "price": 23000,
+    "shippingFee": 3500,
+    "cat": [
+      "outer",
+      "acc"
+    ],
+    "material": "레이온 43%, 나일론 32%, 폴리에스테르 25%",
+    "desc": "잔잔하게 이어지는 골지 짜임이 은은한 결을 만들어 주는, 군더더기 없이 심플한 니트 숄입니다. 어깨부터 팔까지 넉넉하게 감싸 주는 여유로운 실루엣이라 무심하게 걸치기만 해도 차분한 분위기가 완성됩니다. 앞쪽의 단추 하나로 가볍게 여며 단정하게 입거나, 풀어서 자연스럽게 흘러내리듯 연출할 수 있어 하나로 두 가지 무드를 즐기기 좋습니다. 슬리브리스나 반팔 티셔츠, 원피스 위에 더하면 아침저녁으로 쌀쌀한 간절기부터 실내 냉난방이 신경 쓰이는 날까지 부담 없이 활용할 수 있는 데일리 아이템입니다.",
+    "sizeGuide": "가로 131cm / 세로 92cm (FREE 사이즈, 44~66반 추천)",
+    "notices": [
+      "색상은 모니터 해상도 및 설정에 따라 실제 색상과 다소 차이가 있을 수 있습니다.",
+      "사이즈는 재는 위치에 따라 약 2~5cm 오차가 있을 수 있습니다.",
+      "니트 소재 특성상 첫 세탁은 드라이클리닝을 권장합니다."
+    ],
+    "orderNotice": "라스윗의 모든 제품은 주문 후 거래처 오더 방식으로 진행됩니다. 주문 시 3~7일 정도 소요되며, 리오더 상품의 경우 7~14일까지 소요될 수 있으니 여유롭게 주문 부탁드립니다. 부분 배송은 어려우며, 배송비를 추가하시면 부분 배송이 가능하니 참고 부탁드립니다.",
+    "returnNotice": "본 상품은 1:1 주문 오더 상품으로, 불량 이외 단순 변심에 의한 교환/환불이 불가합니다. 주문 후 집화(발송) 완료 후 취소하시면 왕복 배송비가 부과될 수 있으니, 신중히 고려하신 후 주문 부탁드립니다.",
+    "cardImage": "images/onebutton-rib-shawl/card_thumb.jpg",
+    "colors": [
+      {
+        "key": "beige",
+        "label": "베이지",
+        "hex": "#c8bba9",
+        "images": [
+          "images/onebutton-rib-shawl/beige_1.jpg",
+          "images/onebutton-rib-shawl/beige_2.jpg",
+          "images/onebutton-rib-shawl/beige_3.jpg",
+          "images/onebutton-rib-shawl/beige_4.jpg",
+          "images/onebutton-rib-shawl/beige_5.jpg",
+          "images/onebutton-rib-shawl/beige_6.jpg",
+          "images/onebutton-rib-shawl/beige_7.jpg"
+        ]
+      },
+      {
+        "key": "charcoal",
+        "label": "차콜",
+        "hex": "#4a4a4a",
+        "images": [
+          "images/onebutton-rib-shawl/group_1.jpg",
+          "images/onebutton-rib-shawl/group_2.jpg",
+          "images/onebutton-rib-shawl/group_3.jpg"
+        ]
+      },
+      {
+        "key": "black",
+        "label": "블랙",
+        "hex": "#181818",
+        "images": [
+          "images/onebutton-rib-shawl/group_1.jpg",
+          "images/onebutton-rib-shawl/group_2.jpg",
+          "images/onebutton-rib-shawl/group_3.jpg"
+        ]
+      }
+    ],
+    "createdAt": "2026-10-07"
   }
 ]
