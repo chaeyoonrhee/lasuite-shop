@@ -107,7 +107,8 @@
     "partner_user_id": "437169a1-4b7d-44d0-a947-3bfc077df0ef",
     "payment_method": "kakaopay",
     "status": "결제완료",
-    "approved_at": "2026-09-29T00:05:11"
+    "approved_at": "2026-09-29T00:05:11",
+    "fulfilled": true
   },
   {
     "partner_order_id": "af613a5b12164f49ad084b9b5406bd1e",
