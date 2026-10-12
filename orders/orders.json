@@ -108,5 +108,28 @@
     "payment_method": "kakaopay",
     "status": "결제완료",
     "approved_at": "2026-09-29T00:05:11"
+  },
+  {
+    "partner_order_id": "af613a5b12164f49ad084b9b5406bd1e",
+    "items": [
+      {
+        "kr": "크로커 소가죽 아스트 볼링백",
+        "price": 149000,
+        "qty": 1,
+        "size": "블랙 / 스몰"
+      }
+    ],
+    "total_amount": 152500,
+    "shipping_fee": 3500,
+    "orderer_name": "이은숙",
+    "orderer_phone": "01026798463",
+    "shipping_name": "이은숙",
+    "shipping_phone": "01026798463",
+    "shipping_address": "남양주시 화도읍 창현로45  도뮤토아파트  105동 1902호",
+    "partner_user_id": "760918b2-be4e-4bae-8d5c-25cc835b2dcf",
+    "payment_method": "bank_transfer",
+    "depositor_name": "국지윤",
+    "status": "입금대기",
+    "approved_at": "2026-10-12T01:24:45"
   }
 ]
