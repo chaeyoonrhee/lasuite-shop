@@ -160,5 +160,14 @@
     "category": "product",
     "memo": "백스테이지-아스트 스몰",
     "created_at": "2026-10-14T01:22:46"
+  },
+  {
+    "id": "7595505d",
+    "date": "2026-10-14",
+    "amount": 3200,
+    "vat": 0,
+    "category": "shipping",
+    "memo": "이은숙 배송비",
+    "created_at": "2026-10-14T01:23:21"
   }
 ]
