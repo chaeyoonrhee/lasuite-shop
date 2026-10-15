@@ -239,6 +239,7 @@
   },
   {
     "id": 3,
+    "hidden": true,
     "en": "ROUND NECK CARDIGAN",
     "kr": "라운드넥 가디건",
     "price": 25000,
