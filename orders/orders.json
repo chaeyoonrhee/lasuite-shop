@@ -132,7 +132,8 @@
     "depositor_name": "국지윤",
     "status": "입금확인",
     "approved_at": "2026-10-12T01:24:45",
-    "tracking_number": "365149504555"
+    "tracking_number": "365149504555",
+    "fulfilled": true
   },
   {
     "partner_order_id": "b96b6b0f009d455db48bed9ca3dfa97a",
