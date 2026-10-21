@@ -133,5 +133,33 @@
     "status": "입금확인",
     "approved_at": "2026-10-12T01:24:45",
     "tracking_number": "365149504555"
+  },
+  {
+    "partner_order_id": "b96b6b0f009d455db48bed9ca3dfa97a",
+    "items": [
+      {
+        "kr": "샤 니트 반집업",
+        "price": 36500,
+        "qty": 1,
+        "size": "진베이지"
+      },
+      {
+        "kr": "샤 니트 반집업",
+        "price": 36500,
+        "qty": 1,
+        "size": "먹색"
+      }
+    ],
+    "total_amount": 76500,
+    "shipping_fee": 3500,
+    "orderer_name": "김소영",
+    "orderer_phone": "01071424104",
+    "shipping_name": "김소영",
+    "shipping_phone": "01071424104",
+    "shipping_address": "서울 강남구 압구정로 151, 현대아파트 127동 301호",
+    "partner_user_id": "82f4466d-7cff-47cf-934b-12b4011e7c08",
+    "payment_method": "kakaopay",
+    "status": "결제완료",
+    "approved_at": "2026-10-21T14:32:19"
   }
 ]
