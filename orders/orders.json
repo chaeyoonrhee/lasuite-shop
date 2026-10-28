@@ -161,6 +161,7 @@
     "partner_user_id": "82f4466d-7cff-47cf-934b-12b4011e7c08",
     "payment_method": "kakaopay",
     "status": "결제완료",
-    "approved_at": "2026-10-21T14:32:19"
+    "approved_at": "2026-10-21T14:32:19",
+    "tracking_number": "365153199940"
   }
 ]
